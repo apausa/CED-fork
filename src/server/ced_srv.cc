@@ -2,19 +2,24 @@
  * Server side elements definitions.
  *
  * Alexey Zhelezov, DESY/ITEP, 2005 */
+
+/* Version 2 refactor changes:
+ * - ced_solid_cone replaces glutSolidCone
+ * - ced_render_text replaces renderBitmapString
+ * - CED_FONT_SANS_10 Replaces GLUT font
+ * - SDL_Rect variable type handles screen width and height
+ * - SDL_GetTicks replaces GLUT elapsed time
+ */
+
 #include<iostream>
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#include <GLUT/glut.h>
 #else
 #include <GL/gl.h>
-#include <GL/glu.h>
-#include <X11/Xlib.h>
-#include <GL/glut.h>
 #endif
 
+#include <SDL2/SDL.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -31,13 +36,15 @@
 
 #include <ced.h>
 #include <ced_config.h>
+#include <ced_font.h>
+#include <ced_glu.h>
 #include <unistd.h>
 #include <stdio.h>
-//#include <malloc.h> // obsolete header file
 
 #define PORT  0x1234
-#define PI 3.14159265358979323846f 
+#define PI 3.14159265358979323846f
 
+extern bool ced_needs_redraw; // @refactored Replaces 
 
 //hauke
 //int graphic[3];
@@ -161,9 +168,13 @@ static void ced_add_objmap(CED_Point *p,int max_dxy, unsigned int ID, unsigned i
         }
 
     }
-    if(gluProject((GLdouble)p->x,(GLdouble)p->y,(GLdouble)p->z, modelM,projM,viewport,&winx,&winy,&winz)!=GL_TRUE){
-        return;
-    }
+    glm::dvec3 win = glm::project( // @refactored Replaces custom gluProject function
+        glm::dvec3(p->x, p->y, p->z),
+        glm::make_mat4(modelM),
+        glm::make_mat4(projM),
+        glm::dvec4(viewport[0], viewport[1], viewport[2], viewport[3])
+    );
+    winx = win.x; winy = win.y; winz = win.z;
     omap[omap_count].ID=ID;
     omap[omap_count].type=type;
     omap[omap_count].layer=layer;
@@ -1197,19 +1208,6 @@ int find_selected_object(int x,int y,GLfloat *wx,GLfloat *wy,GLfloat *wz, int *i
     return 0;
 }
 
-/**
- * Enables to print string as 2D bitmaps in OpenGL 
- * @author: SD
- * @date: 02.09.09
- * */
-static void renderBitmapString( float x, float y, void *font, char* string) { 
-    char *c;
-    glRasterPos2f(x,y);
-    for (c=string; *c != '\0'; c++) {
-        glutBitmapCharacter(font, *c);
-    }
-}
-
 
 /*************************************************************** 
 * hauke hoelbe 08.02.2010                                      *
@@ -1293,7 +1291,7 @@ static void ced_draw_hit(CED_Hit *h){
 
     // time is passed to the hit data and is expected to be animated
     bool to_animate = h->time > 0.f;
-    if ( to_animate && animate_layer == -1 ) animation_start_time = glutGet(GLUT_ELAPSED_TIME);
+    if ( to_animate && animate_layer == -1 ) animation_start_time = (int)SDL_GetTicks();
 
     if(!IS_VISIBLE(h->layer)){
         if (to_animate && animate_layer == int(h->layer) ) animate_layer = -1;
@@ -1306,9 +1304,9 @@ static void ced_draw_hit(CED_Hit *h){
         else if ( animate_layer != int(h->layer) ){
             setting.layer[animate_layer] = false;
             animate_layer = h->layer;
-            animation_start_time = glutGet(GLUT_ELAPSED_TIME);
+            animation_start_time = (int)SDL_GetTicks();
         }
-        float elapsed_time = 0.001*( glutGet(GLUT_ELAPSED_TIME) - animation_start_time); // in seconds
+        float elapsed_time = 0.001*( (int)SDL_GetTicks() - animation_start_time); // in seconds
         if ( elapsed_time < h->time ) return ;
     }
 
@@ -2373,8 +2371,10 @@ static void ced_draw_legend(CED_Legend *legend){
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
-    GLfloat w=glutGet(GLUT_SCREEN_WIDTH); 
-    GLfloat h=glutGet(GLUT_SCREEN_HEIGHT); ;
+    SDL_Rect display_bounds;
+    SDL_GetDisplayBounds(0, &display_bounds);
+    GLfloat w = (GLfloat)display_bounds.w;
+    GLfloat h = (GLfloat)display_bounds.h;
 
     int  WORLD_SIZE=1000; //static worldsize maybe will get problems in the future...
     glOrtho(-WORLD_SIZE*w/h,WORLD_SIZE*w/h,-WORLD_SIZE,WORLD_SIZE, -15*WORLD_SIZE,15*WORLD_SIZE);
@@ -2415,7 +2415,7 @@ static void ced_draw_legend(CED_Legend *legend){
 	int x_offset_legend = 60;
 	int y_offset_legend = 20;
 	
-	void* font=GLUT_BITMAP_TIMES_ROMAN_10; //default font                           //draw into back right buffer
+	int font = CED_FONT_SANS_10;
   	int tick_size = 10;
 	
 	/**
@@ -2424,7 +2424,7 @@ static void ced_draw_legend(CED_Legend *legend){
     double dark=1.0-(setting.bgcolor[0]+setting.bgcolor[1]+setting.bgcolor[2])/3.0; //ever readable color
     glColor3f(dark,dark,dark);
 
-	renderBitmapString(x_min-x_offset_legend,y_min+stripeThickness*color_steps-y_offset_legend, font, header);
+	ced_render_text(font, x_min-x_offset_legend, y_min+stripeThickness*color_steps-y_offset_legend, header);
 	glEnd();
 	//glPopMatrix();
 	
@@ -2477,13 +2477,13 @@ static void ced_draw_legend(CED_Legend *legend){
 			
 			if (i==0){
 				snprintf(string, 6,  "%.1f", ene_min);
-				renderBitmapString(x_min+x_offset,y_min+y_offset, font, string);
+				ced_render_text(font, x_min+x_offset, y_min+y_offset, string);
 			}
 			else if (i==(color_steps-1)){
 				//printf("top\n");
 				snprintf(string, 6, "%.1f", ene_max);
-				renderBitmapString(x_min+x_offset,y_min+stripeThickness*i+y_offset, font, string);
-			}
+				ced_render_text(font, x_min+x_offset, y_min+stripeThickness*i+y_offset, string);
+            }
 		}
 		
 		/**
@@ -2519,7 +2519,7 @@ static void ced_draw_legend(CED_Legend *legend){
 
     
             glColor3f(dark,dark,dark);
-			renderBitmapString(x_min+x_offset,y_min+stripeThickness*pos+y_offset, font, string);
+			ced_render_text(font, x_min+x_offset, y_min+stripeThickness*pos+y_offset, string);
 
 			++tickNumber;
 		}
@@ -2770,7 +2770,7 @@ static void ced_draw_cone_r(CED_ConeR * cone )  {
 
   	glRotated(180, 1.0, 0.0, 0.0);
   	glTranslated(0.0, 0.0, -(cone->height));
-	glutSolidCone(base, height, slices, stacks);
+	ced_solid_cone(base, height, slices, stacks)
 
     
 
