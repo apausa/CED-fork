@@ -19,14 +19,10 @@ SET( ${PROJECT_NAME}_VERSION_PATCH 1 )
 
 FIND_PACKAGE( ILCUTIL COMPONENTS ILCSOFT_CMAKE_MODULES REQUIRED )
 
-# GLUT and OpenGL are required by glced
-FIND_PACKAGE( GLUT REQUIRED )
-FIND_PACKAGE( OpenGL QUIET )
-
 # load default settings from ILCSOFT_CMAKE_MODULES
 INCLUDE( ilcsoft_default_settings )
 
-
+FIND_PACKAGE( SDL2 REQUIRED )
 
 ### DOCUMENTATION ###########################################################
 
@@ -62,7 +58,7 @@ INSTALL_SHARED_LIBRARY( CED DESTINATION lib )
 
 # link CED client library to the math library
 FIND_LIBRARY( c_math_lib NAMES m )
-TARGET_LINK_LIBRARIES( CED ${GLUT_LIBRARIES} ${c_math_lib} )
+TARGET_LINK_LIBRARIES( CED ${c_math_lib} )
 MARK_AS_ADVANCED( c_math_lib )
 
 
@@ -73,53 +69,10 @@ MESSAGE( STATUS "CED_SERVER = ${CED_SERVER}" )
 
 IF( CED_SERVER )
 
-    IF( NOT GLUT_FOUND OR NOT OPENGL_FOUND )
-        MESSAGE( FATAL_ERROR "could not find packages glut + opengl required to build glced" )
-    ENDIF()
-
-    INCLUDE_DIRECTORIES( ${GLUT_INCLUDE_DIR} )
-
-    # copy paths from OPENGL_LIBRARIES to rpath list of glced to avoid system
-    # opengl libraries used in the linking process of glced to be overwriten
-    # by LD_LIBRARY_PATH, e.g.: LD_LIBRARY_PATH set by geant4 env_init_script
-    # points to old mesa libraries in afs
-    IF( NOT CED_NOT_INCLUDE_OPENGL_LINKER_PATH ) 
-      FOREACH( _opengl_lib ${OPENGL_LIBRARIES} )
-        GET_FILENAME_COMPONENT( _opengl_lib_path ${_opengl_lib} PATH )
-        # the RPATH to be used when installing, but only if it's not a system directory
-        LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES ${_opengl_lib_path} isSystemDir)
-        #MESSAGE( "isSystemDir: ${isSystemDir}" )
-        IF("${isSystemDir}" STREQUAL "-1")
-          LIST( APPEND _opengl_linker_paths ${_opengl_lib_path} )
-        ENDIF("${isSystemDir}" STREQUAL "-1")
-      ENDFOREACH()
-
-    # remove duplicate paths
-      IF( _opengl_linker_paths )
-        LIST( REMOVE_DUPLICATES _opengl_linker_paths )
-      ENDIF()
-    ENDIF()
-
-    #MESSAGE( "_opengl_linker_paths: ${_opengl_linker_paths}" )
-
-    # this would affect all targets
-    #LIST( APPEND CMAKE_INSTALL_RPATH "${_opengl_linker_paths}" )
-    #IF( APPLE )
-    #    LIST( APPEND CMAKE_INSTALL_NAME_DIR "${_opengl_linker_paths}" )
-    #ENDIF()
-
     AUX_SOURCE_DIRECTORY( ./src/server server_sources )
     ADD_EXECUTABLE( glced ${server_sources} )
 
-    SET_TARGET_PROPERTIES( glced PROPERTIES
-        INSTALL_RPATH "${CMAKE_INSTALL_RPATH};${_opengl_linker_paths}"
-        INSTALL_NAME_DIR "${CMAKE_INSTALL_NAME_DIR};${_opengl_linker_paths}"
-    )
-
-    TARGET_LINK_LIBRARIES( glced CED 
-        ${GLUT_glut_LIBRARY}
-        ${OPENGL_LIBRARIES}
-    )
+    TARGET_LINK_LIBRARIES( glced CED SDL2::SDL2 )
 
     INSTALL( TARGETS glced DESTINATION bin )
 
