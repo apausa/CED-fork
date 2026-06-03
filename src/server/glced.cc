@@ -63,6 +63,7 @@
   * - Event type SDL_MOUSEWHEEL replaces glutMouseWheelFunc(mouseWheel)
   * - idle_func replaces glutIdleFunc
   * - Replace GLUT bult-in socket monitoring with a non-blocking check for incoming client data
+  * - Update font dimensions system
   */
 
  #ifdef __APPLE__
@@ -99,7 +100,7 @@
 
 #include <SDL2/SDL.h>
 #include <ced_glu.h>
-#include <ced_font.h>
+#include <gl_font.h>
 
 #include <ced_menu.h>
 
@@ -640,9 +641,8 @@ void printShortcuts(void){
     const unsigned int MAX_STR_LEN=30;
     int i;
 
-    FontDimensions dim = getFontDimensions(setting.font);
-    int height = dim.height + 2;
-    int width  = dim.width;
+    int height = font_get_height(setting.font) + 2;
+    int width  = font_get_width(setting.font, "A");
 
     //float line = 12; //height of one line
     //float column = MAX_STR_LEN*5; //width of one line
@@ -1278,7 +1278,7 @@ void defaultSettings(void){
         }
 
 
-        setting.font=0;
+        setting.font=CED_FONT_SANS_20;
 
         for(int i=0; i < CED_MAX_LAYER; i++){
             setting.layer[i]=true; // turn all layers on
@@ -1997,7 +1997,7 @@ static void motion(int x,int y){
     ced_needs_redraw = true;
 }
 
-int glut_tcp_server(unsigned short port, void (*user_func)(void *data));
+int tcp_server(unsigned short port, void (*user_func)(void *data));
 
 static void input_data(void *data){
     if(ced_process_input(data)>0){
@@ -2671,17 +2671,17 @@ void selectFromMenu(int id){ //hauke
             break;
 
         case FONT0:
-            setting.font=0;
+            setting.font=CED_FONT_SANS_16;
             //buildMainMenu();
             break;
 
         case FONT1:
-            setting.font=1;
+            setting.font=CED_FONT_SANS_20;
             //buildMainMenu();
             break;
 
         case FONT2:
-            setting.font=2;
+            setting.font=CED_FONT_SANS_24;
             //buildMainMenu();
             break;
 
@@ -3545,18 +3545,8 @@ void buildPopUpMenu(int x, int y){
 
     }
 
-    int height = getFontDimensions(setting.font).height;
-
-    int width=200;
-    if(setting.font==0){
-        width=150;
-    }
-    if(setting.font==1){
-        width=200;
-    }
-    if(setting.font==2){
-        width=300;
-    }
+    int height = font_get_height(setting.font);
+    int width = font_get_width(setting.font, "A") * 20;
 
     int pos_y=popupmenu->size()*height;
 
@@ -4156,7 +4146,7 @@ static void mainLoop(SDL_GLContext gl_context)
         }
     }
 
-    ced_font_shutdown();
+    font_clean();
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(ced_sdl_window);
     ced_sdl_window = nullptr;
@@ -4302,9 +4292,9 @@ int main(int argc,char *argv[]){
     p = getenv ( "CED_PORT" );
     if(p != NULL){
         printf("Try to use user defined port %s.\n", p);
-        glut_tcp_server(atoi(p),input_data);
+        tcp_server(atoi(p),input_data);
     }else{
-        glut_tcp_server(7286,input_data);
+        tcp_server(7286,input_data);
     }
 
 
@@ -4350,7 +4340,7 @@ int main(int argc,char *argv[]){
     set_bg_color(setting.bgcolor[0],setting.bgcolor[1],setting.bgcolor[2],setting.bgcolor[2]); //set to default (black)
     //glClearColor(BG_COLOR[0],BG_COLOR[1], BG_COLOR[2], BG_COLOR[3]);
     init();
-    ced_font_init();   
+    font_init();   
 
     buildLayerMenus();
     buildMainMenu();
