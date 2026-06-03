@@ -4161,7 +4161,9 @@ static void mainLoop(SDL_GLContext gl_context)
 }
 
 int main(int argc,char *argv[]){
+#ifndef __APPLE__
     setenv("SDL_VIDEODRIVER", "wayland", 1);
+#endif
 
     mm_reset=mm;
     WORLD_SIZE = DEFAULT_WORLD_SIZE ;
