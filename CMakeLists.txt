@@ -74,7 +74,7 @@ IF( CED_SERVER )
 
     ADD_EXECUTABLE( glced ./src/server/glced.cc ./src/server/ced_srv.cc ./src/server/gl_font.cc ./src/server/freeSans.cc )
 
-    TARGET_LINK_LIBRARIES( glced CED SDL2::SDL2 OpenGL::GL SDL2_ttf::SDL2_ttf glm::glm )
+    TARGET_LINK_LIBRARIES( glced CED SDL2::SDL2 OpenGL::GL OpenGL::GLU SDL2_ttf::SDL2_ttf glm::glm )
 
     INSTALL( TARGETS glced DESTINATION bin )
 
