@@ -62,6 +62,7 @@
   * - Event type SDL_MOUSEMOTION replaces glutMotionFunc(motion) and glutPassiveMotionFunc(mouse_passive)
   * - Event type SDL_MOUSEWHEEL replaces glutMouseWheelFunc(mouseWheel)
   * - idle_func replaces glutIdleFunc
+  * - Replace GLUT bult-in socket monitoring with a non-blocking check for incoming client data
   */
 
  #ifdef __APPLE__
@@ -188,14 +189,8 @@ static float userDefinedBGColor[] = {-1.0, -1.0, -1.0, -1.0};
 
 static unsigned int iBGcolor = 0;
 
-/* AZ I check for TCP sockets as well,
- * function will return 0 when such "event" happenes */
-extern struct __glutSocketList {
-  struct __glutSocketList *next;
-  int fd;
-  void  (*read_func)(struct __glutSocketList *sock);
-} *__glutSockets;
-
+extern int  socket_fd;
+extern void (*socket_read_fn)(void);
 extern bool client_connected;
 
 CED_SubSubMenu *detectorlayermenu;
@@ -1533,8 +1528,6 @@ static void mouse(int btn,int state,int x,int y){
     //hauke
     struct timeval tv;
 
-    struct __glutSocketList *sock;
-
     if(state!=MOUSE_DOWN){
         move_mode=NO_MOVE;
         return;
@@ -1593,11 +1586,9 @@ static void mouse(int btn,int state,int x,int y){
                 }
 
 
-               sock=__glutSockets;
                id = SELECTED_ID;
-               //printf(" ced_get_selected : socket connected: %d", sock->fd );
                if(client_connected){
-                    send( sock->fd , &id , sizeof(int) , 0 );
+                    send( socket_fd , &id , sizeof(int) , 0 );
                 }
             }else{
                 select_nothing=true;
@@ -2332,12 +2323,9 @@ void selectFromMenu(int id){ //hauke
 
             //cout << "TODO: pick with: " << popupmenu->x_click << " , " << popupmenu->y_click << endl;
             if(!ced_picking(popupmenu->x_click,popupmenu->y_click ,&mm.mv.x,&mm.mv.y,&mm.mv.z)){
-               struct __glutSocketList *sock;
-               sock=__glutSockets;
                int sel_id = SELECTED_ID;
-               //printf(" ced_get_selected : socket connected: %d", sock->fd );
                if(client_connected){
-                    send( sock->fd , &sel_id , sizeof(int) , 0 );
+                    send( socket_fd , &sel_id , sizeof(int) , 0 );
                 }
             }
             break;
@@ -4138,7 +4126,22 @@ static void mainLoop(SDL_GLContext gl_context)
             }
         }
 
-        poll_sockets();
+        //  Replace GLUT bult-in socket monitoring with a non-blocking check for incoming client data
+        if (socket_fd >= 0 && socket_read_fn) {
+            fd_set fds;
+            FD_ZERO(&fds);
+            FD_SET(socket_fd, &fds);
+            struct timeval tv = {0, 0};
+            if (select(
+                    socket_fd + 1,
+                    &fds,
+                    NULL,
+                    NULL,
+                    &tv
+                ) > 0
+            )
+                socket_read_fn();
+        }
 
         if (idle_func) {
             idle_func();
