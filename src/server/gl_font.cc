@@ -32,6 +32,7 @@
  * - font_init
  * - font_render
  * - font_get_width
+ * - font_get_height
  * - flont_clean
 */
 
@@ -45,7 +46,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
-#include <ced_font.h>
+#include <gl_font.h>
 
 extern const unsigned char freesans_otf[];
 extern const unsigned int  freesans_otf_len;
@@ -226,15 +227,26 @@ void font_render(int font_id, float x, float y, const char *text)
     _SDL_GL_Leave2DMode();
 }
 
+int font_get_height(int font_id)
+{
+    TTF_Font *font = _font_get(font_id);
+
+    int w = 0, h = 0;
+    TTF_SizeUTF8(font, "A", &w, &h);
+
+    return h;
+}
+
 int font_get_width(int font_id, const char *text)
 {
-    if (!text || !*text) return 0;
     TTF_Font *font = _font_get(font_id);
-    if (!font) return 0;
+
     int w = 0, h = 0;
     TTF_SizeUTF8(font, text, &w, &h);
+
     return w;
 }
+
 void font_clean()
 {
     TTF_CloseFont(_font_sans_16);
