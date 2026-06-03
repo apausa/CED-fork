@@ -19,33 +19,42 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
-/* A simple program to test the text rendering feature of the TTF library */
+/* 
+ * These functions have been kept after adapting them to SDL2 
+ * - _SDL_GL_Enter2DMode
+ * - _SDL_GL_Leave2DMode
+ * - _power_of_two 
+ * - _SDL_GL_LoadTexture
+ * 
+ * These functions were added to adapt it to the project.
+ * - _font_open
+ * - _font_get
+ * - font_init
+ * - font_render
+ * - font_get_width
+ * - flont_clean
+*/
 
-/* quiet windows compiler warnings */
-#define _CRT_SECURE_NO_WARNINGS
-
-#include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
-#include <SDL3_ttf/SDL_ttf.h>
+#ifdef __APPLE__
+#  include <OpenGL/gl.h>
+#else
+#  include <GL/gl.h>
+#endif
 
-#ifdef HAVE_OPENGL
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
+#include <ced_font.h>
 
-#include <SDL3/SDL_opengl.h>
+extern const unsigned char freesans_otf[];
+extern const unsigned int  freesans_otf_len;
 
-#define DEFAULT_PTSIZE  18.0f
-#define DEFAULT_TEXT    "The quick brown fox jumped over the lazy dog"
-#define WIDTH   640
-#define HEIGHT  480
+static TTF_Font *_font_sans_16 = NULL;
+static TTF_Font *_font_sans_20 = NULL;
+static TTF_Font *_font_sans_24 = NULL;
 
-#define TTF_GLFONT_USAGE \
-"Usage: %s [-b] [-i] [-u] [--fgcol r,g,b] [--bgcol r,g,b] \
-<font>.ttf [ptsize] [text]\n"
-
-static void SDL_GL_Enter2DMode(int width, int height)
+static void _SDL_GL_Enter2DMode(int width, int height)
 {
     /* Note, there may be other things you need to change,
        depending on how you have your OpenGL state set up.
@@ -74,7 +83,7 @@ static void SDL_GL_Enter2DMode(int width, int height)
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 }
 
-static void SDL_GL_Leave2DMode(void)
+static void _SDL_GL_Leave2DMode(void)
 {
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
@@ -86,7 +95,7 @@ static void SDL_GL_Leave2DMode(void)
 }
 
 /* Quick utility function for texture creation */
-static int power_of_two(int input)
+static int _power_of_two(int input)
 {
     int value = 1;
 
@@ -106,14 +115,14 @@ static GLuint SDL_GL_LoadTexture(SDL_Surface *surface, GLfloat *texcoord)
     SDL_BlendMode saved_mode;
 
     /* Use the surface width and height expanded to powers of 2 */
-    w = power_of_two(surface->w);
-    h = power_of_two(surface->h);
+    w = _power_of_two(surface->w);
+    h = _power_of_two(surface->h);
     texcoord[0] = 0.0f;         /* Min X */
     texcoord[1] = 0.0f;         /* Min Y */
     texcoord[2] = (GLfloat)surface->w / w;  /* Max X */
     texcoord[3] = (GLfloat)surface->h / h;  /* Max Y */
 
-    image = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_RGBA32);
+    image = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA32);
     if (image == NULL) {
         return 0;
     }
@@ -148,336 +157,94 @@ static GLuint SDL_GL_LoadTexture(SDL_Surface *surface, GLfloat *texcoord)
              GL_RGBA,
              GL_UNSIGNED_BYTE,
              image->pixels);
-    SDL_DestroySurface(image); /* No longer needed */
+    SDL_FreeSurface(image); /* No longer needed */
 
     return texture;
 }
 
-static void cleanup(int exitcode)
+// Load the font from the embedded byte array to a given size
+static TTF_Font *_font_open(int ptsize)
 {
-    TTF_Quit();
-    SDL_Quit();
-    exit(exitcode);
+    SDL_RWops *rw = SDL_RWFromConstMem(freesans_otf, (int)freesans_otf_len);
+    return rw ? TTF_OpenFontRW(rw, 1, ptsize) : NULL;
 }
 
-int main(int argc, char *argv[])
+// Map a font ID to its loaded TTF_Font
+static TTF_Font *_font_get(int font_id)
 {
-    char *argv0 = argv[0];
-    SDL_Window *window;
-    SDL_GLContext context;
-    TTF_Font *font;
-    SDL_Surface *text = NULL;
-    float ptsize;
-    int i, done;
-    SDL_Color white = { 0xFF, 0xFF, 0xFF, SDL_ALPHA_OPAQUE };
-    SDL_Color black = { 0x00, 0x00, 0x00, SDL_ALPHA_OPAQUE };
-    SDL_Color *forecol;
-    SDL_Color *backcol;
-    GLenum gl_error;
-    GLuint texture;
-    int x, y, w, h;
-    GLfloat texcoord[4];
-    GLfloat texMinX, texMinY;
-    GLfloat texMaxX, texMaxY;
-        float color[8][3]= {{ 1.0,  1.0,  0.0},
-                { 1.0,  0.0,  0.0},
-                { 0.0,  0.0,  0.0},
-                { 0.0,  1.0,  0.0},
-                { 0.0,  1.0,  1.0},
-                { 1.0,  1.0,  1.0},
-                { 1.0,  0.0,  1.0},
-                { 0.0,  0.0,  1.0}};
-    float cube[8][3]= {{ 0.5,  0.5, -0.5},
-               { 0.5, -0.5, -0.5},
-               {-0.5, -0.5, -0.5},
-               {-0.5,  0.5, -0.5},
-               {-0.5,  0.5,  0.5},
-               { 0.5,  0.5,  0.5},
-               { 0.5, -0.5,  0.5},
-               {-0.5, -0.5,  0.5}};
-    SDL_Event event;
-    int renderstyle;
-    int dump;
-    char *message;
-
-    /* Look for special execution mode */
-    dump = 0;
-    /* Look for special rendering types */
-    renderstyle = TTF_STYLE_NORMAL;
-    /* Default is black and white */
-    forecol = &black;
-    backcol = &white;
-    for (i=1; argv[i] && argv[i][0] == '-'; ++i) {
-        if (SDL_strcmp(argv[i], "-b") == 0) {
-            renderstyle |= TTF_STYLE_BOLD;
-        } else
-        if (SDL_strcmp(argv[i], "-i") == 0) {
-            renderstyle |= TTF_STYLE_ITALIC;
-        } else
-        if (SDL_strcmp(argv[i], "-u") == 0) {
-            renderstyle |= TTF_STYLE_UNDERLINE;
-        } else
-        if (SDL_strcmp(argv[i], "--dump") == 0) {
-            dump = 1;
-        } else
-        if (SDL_strcmp(argv[i], "--fgcol") == 0) {
-            int r, g, b;
-            if (sscanf (argv[++i], "%d,%d,%d", &r, &g, &b) != 3) {
-                fprintf(stderr, TTF_GLFONT_USAGE, argv0);
-                return(1);
-            }
-            forecol->r = (Uint8)r;
-            forecol->g = (Uint8)g;
-            forecol->b = (Uint8)b;
-        } else
-        if (SDL_strcmp(argv[i], "--bgcol") == 0) {
-            int r, g, b;
-            if (sscanf (argv[++i], "%d,%d,%d", &r, &g, &b) != 3) {
-                fprintf(stderr, TTF_GLFONT_USAGE, argv0);
-                return(1);
-            }
-            backcol->r = (Uint8)r;
-            backcol->g = (Uint8)g;
-            backcol->b = (Uint8)b;
-        } else {
-            fprintf(stderr, TTF_GLFONT_USAGE, argv0);
-            return(1);
-        }
+    switch (font_id) {
+        case CED_FONT_SANS_16: return _font_sans_16;
+        case CED_FONT_SANS_20: return _font_sans_20;
+        default: return _font_sans_24;
     }
-    argv += i;
-    argc -= i;
+}
 
-    /* Check usage */
-    if (!argv[0]) {
-        fprintf(stderr, TTF_GLFONT_USAGE, argv0);
-        return(1);
-    }
-
-    /* Initialize the TTF library */
+void font_init()
+{
     if (!TTF_Init()) {
-        fprintf(stderr, "Couldn't initialize TTF: %s\n",SDL_GetError());
-        SDL_Quit();
-        return(2);
+        fprintf(stderr, "Couldn't initialize TTF: %s\n", TTF_GetError());
+        return;
     }
 
-    /* Open the font file with the requested point size */
-    ptsize = 0.0f;
-    if (argc > 1) {
-        ptsize = (float)SDL_atof(argv[1]);
-    }
-    if (ptsize == 0.0f) {
-        i = 2;
-        ptsize = DEFAULT_PTSIZE;
-    } else {
-        i = 3;
-    }
-    font = TTF_OpenFont(argv[0], ptsize);
-    if (font == NULL) {
-        fprintf(stderr, "Couldn't load %g pt font from %s: %s\n",
-                    ptsize, argv[0], SDL_GetError());
-        cleanup(2);
-    }
-    TTF_SetFontStyle(font, renderstyle);
-
-    if(dump) {
-        for(i = 48; i < 123; i++) {
-            SDL_Surface* glyph = NULL;
-
-            glyph = TTF_RenderGlyph_Shaded(font, i, *forecol, *backcol);
-
-            if(glyph) {
-                char outname[64];
-                sprintf(outname, "glyph-%d.bmp", i);
-                SDL_SaveBMP(glyph, outname);
-            }
-
-        }
-        cleanup(0);
-    }
-
-    /* Set a 640x480 video mode */
-    window = SDL_CreateWindow("glfont", WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
-    if (window == NULL) {
-        fprintf(stderr, "Couldn't create window: %s\n", SDL_GetError());
-        cleanup(2);
-    }
-
-    context = SDL_GL_CreateContext(window);
-    if (context == NULL) {
-        fprintf(stderr, "Couldn't create OpenGL context: %s\n", SDL_GetError());
-        cleanup(2);
-    }
-
-    /* Render and center the message */
-    if (argc > 2) {
-        message = argv[2];
-    } else {
-        message = DEFAULT_TEXT;
-    }
-    text = TTF_RenderText_Blended(font, message, 0, *forecol);
-    if (text == NULL) {
-        fprintf(stderr, "Couldn't render text: %s\n", SDL_GetError());
-        TTF_CloseFont(font);
-        cleanup(2);
-    }
-    x = (WIDTH - text->w)/2;
-    y = (HEIGHT - text->h)/2;
-    w = text->w;
-    h = text->h;
-    printf("Font is generally %d big, and string is %d big\n",
-                        TTF_GetFontHeight(font), text->h);
-
-    /* Convert the text into an OpenGL texture */
-    glGetError();
-    texture = SDL_GL_LoadTexture(text, texcoord);
-    if ((gl_error = glGetError()) != GL_NO_ERROR) {
-        /* If this failed, the text may exceed texture size limits */
-        printf("Warning: Couldn't create texture: 0x%x\n", gl_error);
-    }
-
-    /* Make texture coordinates easy to understand */
-    texMinX = texcoord[0];
-    texMinY = texcoord[1];
-    texMaxX = texcoord[2];
-    texMaxY = texcoord[3];
-
-    /* We don't need the original text surface anymore */
-    SDL_DestroySurface(text);
-
-    /* Initialize the GL state */
-    glViewport(0, 0, WIDTH, HEIGHT);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-
-    glOrtho(-2.0, 2.0, -2.0, 2.0, -20.0, 20.0);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    glEnable(GL_DEPTH_TEST);
-
-    glDepthFunc(GL_LESS);
-
-    glShadeModel(GL_SMOOTH);
-
-    /* Wait for a keystroke, and blit text on mouse press */
-    done = 0;
-    while (!done) {
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-                case SDL_EVENT_MOUSE_MOTION:
-                x = (int)(event.motion.x - w/2);
-                y = (int)(event.motion.y - h/2);
-                break;
-
-                case SDL_EVENT_KEY_DOWN:
-                case SDL_EVENT_QUIT:
-                done = 1;
-                break;
-                default:
-                break;
-            }
-        }
-
-        /* Clear the screen */
-        glClearColor(1.0, 1.0, 1.0, 1.0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        /* Draw the spinning cube */
-        glBegin(GL_QUADS);
-
-            glColor3fv(color[0]);
-            glVertex3fv(cube[0]);
-            glColor3fv(color[1]);
-            glVertex3fv(cube[1]);
-            glColor3fv(color[2]);
-            glVertex3fv(cube[2]);
-            glColor3fv(color[3]);
-            glVertex3fv(cube[3]);
-
-            glColor3fv(color[3]);
-            glVertex3fv(cube[3]);
-            glColor3fv(color[4]);
-            glVertex3fv(cube[4]);
-            glColor3fv(color[7]);
-            glVertex3fv(cube[7]);
-            glColor3fv(color[2]);
-            glVertex3fv(cube[2]);
-
-            glColor3fv(color[0]);
-            glVertex3fv(cube[0]);
-            glColor3fv(color[5]);
-            glVertex3fv(cube[5]);
-            glColor3fv(color[6]);
-            glVertex3fv(cube[6]);
-            glColor3fv(color[1]);
-            glVertex3fv(cube[1]);
-
-            glColor3fv(color[5]);
-            glVertex3fv(cube[5]);
-            glColor3fv(color[4]);
-            glVertex3fv(cube[4]);
-            glColor3fv(color[7]);
-            glVertex3fv(cube[7]);
-            glColor3fv(color[6]);
-            glVertex3fv(cube[6]);
-
-            glColor3fv(color[5]);
-            glVertex3fv(cube[5]);
-            glColor3fv(color[0]);
-            glVertex3fv(cube[0]);
-            glColor3fv(color[3]);
-            glVertex3fv(cube[3]);
-            glColor3fv(color[4]);
-            glVertex3fv(cube[4]);
-
-            glColor3fv(color[6]);
-            glVertex3fv(cube[6]);
-            glColor3fv(color[1]);
-            glVertex3fv(cube[1]);
-            glColor3fv(color[2]);
-            glVertex3fv(cube[2]);
-            glColor3fv(color[7]);
-            glVertex3fv(cube[7]);
-
-        glEnd();
-
-        /* Rotate the cube */
-        glMatrixMode(GL_MODELVIEW);
-        glRotatef(5.0, 1.0, 1.0, 1.0);
-
-        /* Show the text on the screen */
-        SDL_GL_Enter2DMode(WIDTH, HEIGHT);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glBegin(GL_TRIANGLE_STRIP);
-        glTexCoord2f(texMinX, texMinY); glVertex2i(x,   y);
-        glTexCoord2f(texMaxX, texMinY); glVertex2i(x+w, y);
-        glTexCoord2f(texMinX, texMaxY); glVertex2i(x,   y+h);
-        glTexCoord2f(texMaxX, texMaxY); glVertex2i(x+w, y+h);
-        glEnd();
-        SDL_GL_Leave2DMode();
-
-        /* Swap the buffers so everything is visible */
-        SDL_GL_SwapWindow(window);
-    }
-    SDL_GL_DestroyContext(context);
-    TTF_CloseFont(font);
-    cleanup(0);
-
-    /* Not reached, but fixes compiler warnings */
-    return 0;
+    _font_sans_16 = _font_open(16);
+    _font_sans_20 = _font_open(20);
+    _font_sans_24 = _font_open(24);
 }
 
-#else /* HAVE_OPENGL */
-
-int main(int argc, char *argv[])
+void font_render(int font_id, float x, float y, const char *text)
 {
-    (void)argc;
-    (void)argv;
-    printf("No OpenGL support on this system\n");
-    return 1;
+    GLfloat col[4];
+    TTF_Font *font = _font_get(font_id);
+
+    glGetFloatv(GL_CURRENT_COLOR, col); // read the current GL draw color
+
+    SDL_Color color = {(Uint8)(col[0]*255), (Uint8)(col[1]*255), (Uint8)(col[2]*255), 255};
+    SDL_Surface *surf = TTF_RenderUTF8_Blended(font, text, color); // rasterize text to a CPU surface
+
+    if (!surf) return;
+
+    int w = surf->w, h = surf->h; // pixel dimensions of the rendered text
+    GLfloat texcoord[4];
+    GLuint texture = SDL_GL_LoadTexture(surf, texcoord); // upload surface to a GL texture
+    SDL_FreeSurface(surf); // free surface from CPU
+    
+    if (!texture) return;
+
+    GLint vp[4];
+    glGetIntegerv(GL_VIEWPORT, vp); // get current viewport to set up 2D projection
+
+    /* Show the text on the screen */
+    _SDL_GL_Enter2DMode(vp[2], vp[3]);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glBegin(GL_TRIANGLE_STRIP);
+    glTexCoord2f(texcoord[0], texcoord[1]); glVertex2f(x, y);
+    glTexCoord2f(texcoord[2], texcoord[1]); glVertex2f(x+w, y);
+    glTexCoord2f(texcoord[0], texcoord[3]); glVertex2f(x, y+h);
+    glTexCoord2f(texcoord[2], texcoord[3]); glVertex2f(x+w, y+h);
+    glEnd();
+    glDeleteTextures(1, &texture);
+    _SDL_GL_Leave2DMode();
 }
 
-#endif /* HAVE_OPENGL */
+int font_get_width(int font_id, const char *text)
+{
+    if (!text || !*text) return 0;
+    TTF_Font *font = _font_get(font_id);
+    if (!font) return 0;
+    int w = 0, h = 0;
+    TTF_SizeUTF8(font, text, &w, &h);
+    return w;
+}
+void font_clean()
+{
+    TTF_CloseFont(_font_sans_16);
+    _font_sans_16 = NULL;
 
-/* vi: set ts=4 sw=4 expandtab: */
+    TTF_CloseFont(_font_sans_20);
+    _font_sans_20 = NULL;
+
+    TTF_CloseFont(_font_sans_24);
+    _font_sans_24 = NULL;
+
+    TTF_Quit();
+}
