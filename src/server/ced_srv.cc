@@ -5,7 +5,7 @@
 
 /* Version 2 refactor changes:
  * - ced_solid_cone replaces glutSolidCone
- * - ced_render_text replaces renderBitmapString
+ * - font_render replaces renderBitmapString
  * - CED_FONT_SANS_10 Replaces GLUT font
  * - SDL_Rect variable type handles screen width and height
  * - SDL_GetTicks replaces GLUT elapsed time
@@ -36,7 +36,7 @@
 
 #include <ced.h>
 #include <ced_config.h>
-#include <ced_font.h>
+#include <gl_font.h>
 #include <ced_glu.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -2415,7 +2415,7 @@ static void ced_draw_legend(CED_Legend *legend){
 	int x_offset_legend = 60;
 	int y_offset_legend = 20;
 	
-	int font = CED_FONT_SANS_10;
+	int font = CED_FONT_SANS_20;
   	int tick_size = 10;
 	
 	/**
@@ -2424,7 +2424,7 @@ static void ced_draw_legend(CED_Legend *legend){
     double dark=1.0-(setting.bgcolor[0]+setting.bgcolor[1]+setting.bgcolor[2])/3.0; //ever readable color
     glColor3f(dark,dark,dark);
 
-	ced_render_text(font, x_min-x_offset_legend, y_min+stripeThickness*color_steps-y_offset_legend, header);
+	font_render(font, x_min-x_offset_legend, y_min+stripeThickness*color_steps-y_offset_legend, header);
 	glEnd();
 	//glPopMatrix();
 	
@@ -2477,12 +2477,12 @@ static void ced_draw_legend(CED_Legend *legend){
 			
 			if (i==0){
 				snprintf(string, 6,  "%.1f", ene_min);
-				ced_render_text(font, x_min+x_offset, y_min+y_offset, string);
+				font_render(font, x_min+x_offset, y_min+y_offset, string);
 			}
 			else if (i==(color_steps-1)){
 				//printf("top\n");
 				snprintf(string, 6, "%.1f", ene_max);
-				ced_render_text(font, x_min+x_offset, y_min+stripeThickness*i+y_offset, string);
+				font_render(font, x_min+x_offset, y_min+stripeThickness*i+y_offset, string);
             }
 		}
 		
@@ -2519,7 +2519,7 @@ static void ced_draw_legend(CED_Legend *legend){
 
     
             glColor3f(dark,dark,dark);
-			ced_render_text(font, x_min+x_offset, y_min+stripeThickness*pos+y_offset, string);
+			font_render(font, x_min+x_offset, y_min+stripeThickness*pos+y_offset, string);
 
 			++tickNumber;
 		}
