@@ -16,8 +16,10 @@
 
 #ifdef __APPLE__
 #  include <OpenGL/gl.h>
+#  include <OpenGL/glu.h>
 #else
 #  include <GL/gl.h>
+#  include <GL/glu.h>
 #endif
 
 #include <SDL2/SDL.h>
@@ -2424,13 +2426,13 @@ static void ced_draw_legend(CED_Legend *legend){
 	 *  Legend footer: LOG or LIN */
 	switch(scale){
 		case 'a': default:
-			renderBitmapString(x_min-x_offset_legend,y_min-y_offset_legend, font, footer);
+			font_render(font, x_min-x_offset_legend, y_min-y_offset_legend, footer);
 			glEnd();
 		break;
 		/** LIN */
 		case 'b':
 			strncpy( footer, "LIN", 4 );
-			renderBitmapString(x_min-x_offset_legend,y_min-y_offset_legend, font, footer);
+			font_render(font, x_min-x_offset_legend, y_min-y_offset_legend, footer);
 			glEnd();
 		break;
 	}

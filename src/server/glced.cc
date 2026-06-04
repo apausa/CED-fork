@@ -67,8 +67,10 @@
 
  #ifdef __APPLE__
     #include <OpenGL/gl.h>
+    #include <OpenGL/glu.h>
 #else
     #include <GL/gl.h>
+    #include <GL/glu.h>
 #endif
 
 #include <sys/types.h>
@@ -226,8 +228,8 @@ bool ced_needs_redraw = false;
 SDL_Window* ced_sdl_window = nullptr;
 void (*idle_func)(void) = nullptr;
 
-static GLfloat window_width = 0.;
-static GLfloat window_height = 0.;
+GLfloat window_width = 0.;
+GLfloat window_height = 0.;
 
 enum {
     MOUSE_DOWN = 0,
@@ -569,7 +571,7 @@ void printFPS(void){
     //    glutBitmapCharacter(font, *c);
     //}
 
-    font_render(setting.font, -1200, -950, text.c_str());
+    font_render(setting.font, -1200, -950, text);
 
     glEnd();
 
@@ -625,7 +627,7 @@ void printEventTime(void){
     glLoadIdentity();
 
     glColor3f(dark,dark,dark);
-    font_render(setting.font, -600, -950, text.c_str());
+    font_render(setting.font, -600, -950, text);
 
 
     glEnd();
@@ -4035,7 +4037,7 @@ int main(int argc,char *argv[]){
     mm_reset=mm;
     WORLD_SIZE = DEFAULT_WORLD_SIZE ;
 
-    SDL_Init(SDL_INIT_VIDEO)
+    SDL_Init(SDL_INIT_VIDEO);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
