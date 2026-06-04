@@ -6,17 +6,17 @@
 /* Version 2 refactor changes:
  * - ced_solid_cone replaces glutSolidCone
  * - font_render replaces renderBitmapString
- * - CED_FONT_SANS_10 Replaces GLUT font
  * - SDL_Rect variable type handles screen width and height
  * - SDL_GetTicks replaces GLUT elapsed time
  */
 
-#include<iostream>
+#include <iostream>
+#include <vector>
 
 #ifdef __APPLE__
-#include <OpenGL/gl.h>
+#  include <OpenGL/gl.h>
 #else
-#include <GL/gl.h>
+#  include <GL/gl.h>
 #endif
 
 #include <SDL2/SDL.h>
@@ -24,27 +24,22 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <errno.h>
 #include <ced_cli.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
-#include <vector>
-#include <iostream>
 
 #include <ced.h>
 #include <ced_config.h>
 #include <gl_font.h>
 #include <ced_glu.h>
-#include <unistd.h>
-#include <stdio.h>
 
 #define PORT  0x1234
 #define PI 3.14159265358979323846f
 
-extern bool ced_needs_redraw; // @refactored Replaces 
+extern bool ced_needs_redraw;
 
 //hauke
 //int graphic[3];
@@ -168,13 +163,10 @@ static void ced_add_objmap(CED_Point *p,int max_dxy, unsigned int ID, unsigned i
         }
 
     }
-    glm::dvec3 win = glm::project( // @refactored Replaces custom gluProject function
-        glm::dvec3(p->x, p->y, p->z),
-        glm::make_mat4(modelM),
-        glm::make_mat4(projM),
-        glm::dvec4(viewport[0], viewport[1], viewport[2], viewport[3])
-    );
-    winx = win.x; winy = win.y; winz = win.z;
+    if(gluProject((GLdouble)p->x,(GLdouble)p->y,(GLdouble)p->z,
+            modelM,projM,viewport,&winx,&winy,&winz)!=GL_TRUE){
+        return;
+    }
     omap[omap_count].ID=ID;
     omap[omap_count].type=type;
     omap[omap_count].layer=layer;
