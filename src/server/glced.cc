@@ -63,7 +63,8 @@
   * - Event type SDL_MOUSEWHEEL replaces glutMouseWheelFunc(mouseWheel)
   * - idle_func replaces glutIdleFunc
   * - Replace GLUT bult-in socket monitoring with a non-blocking check for incoming client data
-  * - Update font dimensions system
+  * - font_get_width() and font_get_height() replace getFontDimensions()
+  * - font_render() replaces drawHelpString() function
   */
 
  #ifdef __APPLE__
@@ -569,7 +570,7 @@ void printFPS(void){
     //    glutBitmapCharacter(font, *c);
     //}
 
-    drawHelpString(text,-1200,-950);
+    font_render(setting.font, -1200, -950, text.c_str());
 
     glEnd();
 
@@ -625,7 +626,7 @@ void printEventTime(void){
     glLoadIdentity();
 
     glColor3f(dark,dark,dark);
-    drawHelpString(text, -600, -950);
+    font_render(setting.font, -600, -950, text.c_str());
 
 
     glEnd();
@@ -797,7 +798,7 @@ void printShortcuts(void){
 
 
     for(i=0;(unsigned) i<shortcuts.size();i++){
-       drawHelpString(shortcuts[i],  int(i/ITEMS_PER_COLUMN)*column+boarder_quad+5, (i%ITEMS_PER_COLUMN)*line+boarder_quad+10);
+       font_render(setting.font, int(i/ITEMS_PER_COLUMN)*column+boarder_quad+5, (i%ITEMS_PER_COLUMN)*line+boarder_quad+10, shortcuts[i].c_str());
     }
 
     glEnable(GL_DEPTH_TEST);
