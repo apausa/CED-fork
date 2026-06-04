@@ -113,6 +113,7 @@ static int numpict=0;
 int ced_picking(int x,int y,GLfloat *wx,GLfloat *wy,GLfloat *wz); //from ced_srv.c, need header files!
 
 
+
 //*************** global variables ***************************************//
 int animation_start_time = 0;
 int animate_layer = -1;
@@ -229,24 +230,24 @@ static GLfloat window_width = 0.;
 static GLfloat window_height = 0.;
 
 enum {
-    MOUSE_DOWN   = 0,
-    MOUSE_UP     = 1
+    MOUSE_DOWN = 0,
+    MOUSE_UP = 1
 };
 enum {
-    MOUSE_LEFT   = 0,
+    MOUSE_LEFT = 0,
     MOUSE_MIDDLE = 1,
-    MOUSE_RIGHT  = 2
+    MOUSE_RIGHT = 2
 };
 enum {
-    KEY_LEFT      = 100,
-    KEY_UP        = 101,
-    KEY_RIGHT     = 102,
-    KEY_DOWN      = 103,
-    KEY_PAGE_UP   = 104,
+    KEY_LEFT = 100,
+    KEY_UP = 101,
+    KEY_RIGHT = 102,
+    KEY_DOWN = 103,
+    KEY_PAGE_UP = 104,
     KEY_PAGE_DOWN = 105,
-    KEY_HOME      = 106,
-    KEY_END       = 107,
-    KEY_INSERT    = 108
+    KEY_HOME = 106,
+    KEY_END = 107,
+    KEY_INSERT = 108
 };
 
 //************ function declarations ************************* //
@@ -1123,7 +1124,7 @@ static void reshape(int w,int h){
         //glBlendFunc(GL_ONE, GL_ZERO);
         //glEnable(GL_BLEND);
 
-        gluLookAt(CAMERA_POSITION,    0,0,0,    0,1,0);
+        gluLookAt  (CAMERA_POSITION,    0,0,0,    0,1,0);
     }
 
 
@@ -1987,7 +1988,6 @@ static void motion(int x,int y){
     ced_needs_redraw = true;
 }
 
-int tcp_server(unsigned short port, void (*user_func)(void *data));
 
 static void input_data(void *data){
     if(ced_process_input(data)>0){
@@ -2000,128 +2000,12 @@ static void input_data(void *data){
     }
 }
 
-//void subDisplay(void){
-//    char label[CED_MAX_LAYER_CHAR];
-//    int i;
-//
-//    glutSetWindow(subWindow);
-//    //glClearColor(0.5, 0.5, 0.5, 100);
-//    glClearColor(0.5, 0.5, 0.5, 0.5);
-//
-//
-//    //std::cout << glutGet(GLUT_WINDOW_WIDTH) << " vs " << window_width << std::endl;
-//    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//
-//    float line = 45/window_height; //height of one line
-//    //float column = 200/window_width;
-//    float column = 200/window_width; //width of one line
-//
-//    const int ITEMS_PER_COLUMN=int(window_height/60.0); //how many lines per column?
-//    //const int MAX_COLUMN= window_width/100;
-//    //border
-//    glColor3f(0,0.9,.9);
-//    glBegin(GL_LINE_LOOP);
-//    glVertex2f(0.001, 0.01);
-//    glVertex2f(0.001, 0.99);
-//    glVertex2f(0.999, 0.99);
-//    glVertex2f(0.999, 0.01);
-//    glEnd();
-//
-//    glColor3f(1.0, 1.0, 1.0); //white
-//
-//    //printf("window_height %f\nwindow width %f\n", window_height, window_width);
-//
-//    vector<string> shortcuts;
-//    shortcuts.push_back( "[h] Toggle shortcut frame" );
-//    shortcuts.push_back( "[r] Reset view" );
-//    shortcuts.push_back( "[f] Font view" );
-//    shortcuts.push_back( "[s] Side view" );
-//    shortcuts.push_back( "[F] Front projection" );
-//    shortcuts.push_back( "[S] Side projection" );
-//    shortcuts.push_back( "[v] Fisheye projection" );
-//    shortcuts.push_back( "[b] Change background color" );
-//    shortcuts.push_back( "[+] Zoom in" );
-//    shortcuts.push_back( "[-] Zoom out" );
-//    shortcuts.push_back( "[c] Center" );
-//    shortcuts.push_back( "[Z] Cut in z-axe direction" );
-//    shortcuts.push_back( "[z] Cut in -z-axe direction" );
-//    shortcuts.push_back( "[>] Increase transparency" );
-//    shortcuts.push_back( "[<] Decrease transparency" );
-//    shortcuts.push_back( "[`] Toggle all data layers" );
-//    shortcuts.push_back( "[~] Toggle all detector layers" );
-//    shortcuts.push_back( "[Esc] Quit CED" );
-//
-//    glColor3f(1.0, 1.0, 1.0);
-//    sprintf (label, "Control keys");
-//    glRasterPos2f(((int)(0/ITEMS_PER_COLUMN))*column+0.02, 0.80F);
-//    drawStringBig(label);
-//
-//    //for(i=0;(unsigned) i<sizeof(shortcuts)/sizeof(shortcuts[0]);i++){
-//
-//    for(i=0;(unsigned) i<shortcuts.size();i++){
-//       //if((i/ITEMS_PER_COLUMN) > MAX_COLUMN) break;
-//       //sprintf(label,"%s", shortcuts[i]);
-//       //glRasterPos2f(((int)(i/ITEMS_PER_COLUMN))*column+0.02,(ITEMS_PER_COLUMN-(i%ITEMS_PER_COLUMN))*line);
-//       //printf("i=%i  lineposition=%i\n",i, (ITEMS_PER_COLUMN-(i%ITEMS_PER_COLUMN)));
-//       drawHelpString(shortcuts[i], ((int)(i/ITEMS_PER_COLUMN))*column+0.02, (ITEMS_PER_COLUMN-(i%ITEMS_PER_COLUMN))*line );
-//        //drawString(label);
-//    }
-//
-//    int actual_column=(int)((i-1)/ITEMS_PER_COLUMN)+1;
-//
-//    int aline=0;
-//    int j=0;
-//    char tmp[CED_MAX_LAYER_CHAR];
-//    int jj=0;
-//
-//    glColor3f(1.0, 1.0, 1.0);
-//    sprintf (label, "Layers");
-//    glRasterPos2f(((int)(aline/ITEMS_PER_COLUMN)+actual_column)*column, 0.80F);
-//    drawStringBig(label);
-//
-//    for(i=0;i<NUMBER_DATA_LAYER;i++){
-//        for(j=0;j<CED_MAX_LAYER_CHAR-1;j++){
-//            if(layerDescription[i][j] != ','){
-//                tmp[j]=layerDescription[i][j];
-//            }else{
-//                tmp[j]=0;
-//                j+=2;
-//                break;
-//            }
-//        }
-//
-//       //sprintf(label,"[%c] %s%i: %s", layer_keys[i], (i<10)?"0":"", i, layerDescription[i]);
-//        sprintf(label,"[%c] %s%i: %s", layer_keys[i], (i<10)?"0":"", i, tmp);
-//        drawHelpString(label, ((int)(aline/ITEMS_PER_COLUMN)+actual_column)*column,(ITEMS_PER_COLUMN-(aline%ITEMS_PER_COLUMN))*line);
-//        aline++;
-//
-//        jj=j;
-//
-//        for(;j<CED_MAX_LAYER_CHAR-1;j++){
-//            if(layerDescription[i][j] == ',' || layerDescription[i][j] == 0){
-//                tmp[j-jj]=0;
-//                j++; //scrip ", "
-//                jj=j+1;
-//                //drawHelpString(tmp, ((int)(aline/ITEMS_PER_COLUMN)+actual_column+.18)*column,(ITEMS_PER_COLUMN-(aline%ITEMS_PER_COLUMN))*line);
-//                sprintf(label,"[%c] %s%i: %s", layer_keys[i], (i<10)?"0":"", i, tmp);
-//                drawHelpString(label, ((int)(aline/ITEMS_PER_COLUMN)+actual_column)*column,(ITEMS_PER_COLUMN-(aline%ITEMS_PER_COLUMN))*line);
-//
-//                aline++;
-//                if(layerDescription[i][j] == 0){ break; }
-//            }else{
-//                tmp[j-jj]=layerDescription[i][j];
-//            }
-//        }
-//    }
-//    glutSwapBuffers ();
-//}
-
 void subReshape (int w, int h)
 {
   glViewport (0, 0, w, h);
   glMatrixMode (GL_PROJECTION);
   glLoadIdentity ();
-  gluOrtho2D(0.0F, 1.0F, 0.0F, 1.0F);
+  gluOrtho2D (0.0F, 1.0F, 0.0F, 1.0F);
 };
 
 
