@@ -46,7 +46,6 @@
   * - ced_needs_redraw replaces glutPostRedisplay
   * - glutSetWindow function is no longer needed
   * - Removed phased out functions: timer, drawString, writeString, buildMenuPopup
-  * - glOrtho replacede gluOrtho2D
   * - Removed GLUT native menu handle glutSetMenu
   * - SDL_Init replaces glutInit
   * - SDL_GL_SetAttribute calls replace glutInitDisplayMode
@@ -191,7 +190,7 @@ static float userDefinedBGColor[] = {-1.0, -1.0, -1.0, -1.0};
 static unsigned int iBGcolor = 0;
 
 extern int  socket_fd;
-extern void (*socket_read_fn)(void);
+extern void (*socket_fn)(void);
 extern bool client_connected;
 
 CED_SubSubMenu *detectorlayermenu;
@@ -4108,7 +4107,7 @@ static void mainLoop(SDL_GLContext gl_context)
         }
 
         //  Replace GLUT bult-in socket monitoring with a non-blocking check for incoming client data
-        if (socket_fd >= 0 && socket_read_fn) {
+        if (socket_fd >= 0 && socket_fn) {
             fd_set fds;
             FD_ZERO(&fds);
             FD_SET(socket_fd, &fds);
@@ -4121,7 +4120,7 @@ static void mainLoop(SDL_GLContext gl_context)
                     &tv
                 ) > 0
             )
-                socket_read_fn();
+                socket_fn();
         }
 
         if (idle_func) {
