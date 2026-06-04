@@ -182,7 +182,7 @@ static TTF_Font *_font_get(int font_id)
 
 void font_init()
 {
-    if (!TTF_Init()) {
+    if (TTF_Init() != 0) {
         fprintf(stderr, "Couldn't initialize TTF: %s\n", TTF_GetError());
         return;
     }
