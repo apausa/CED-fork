@@ -4031,13 +4031,31 @@ static void mainLoop(SDL_GLContext gl_context)
 
 int main(int argc,char *argv[]){
 #ifndef __APPLE__
-    setenv("SDL_VIDEODRIVER", "wayland", 1);
+    setenv("SDL_VIDEODRIVER", "wayland", 0);
+
+    // SDL's Wayland backend initializes xkbcommon directly as part of SDL_Init() to handle
+    // keyboard input. The key4hep stack sets XKB_CONFIG_ROOT with a :, which xkbcommon
+    // interprets as an empty search path entry and fails to create an XKB context, cascading
+    // into SDL Init returning -1. The following code removes this character.
+    const char *xkb = getenv("XKB_CONFIG_ROOT");
+
+    if (xkb) {
+        std::string s(xkb);
+
+        if (!s.empty() && s.back() == ':') {
+            s.pop_back();
+            setenv("XKB_CONFIG_ROOT", s.c_str(), 1);
+        }
+    }
 #endif
 
     mm_reset=mm;
     WORLD_SIZE = DEFAULT_WORLD_SIZE ;
 
     SDL_Init(SDL_INIT_VIDEO);
+    // SDL's Wayland backend uses EGL which defaults to OpenGL ES. The following code creates a desktop
+    // OpenGL compatibility profile context.
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
