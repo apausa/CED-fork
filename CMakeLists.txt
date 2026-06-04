@@ -25,7 +25,7 @@ INCLUDE( ilcsoft_default_settings )
 FIND_PACKAGE( SDL2 REQUIRED )
 FIND_PACKAGE( OpenGL REQUIRED )
 FIND_PACKAGE( SDL2_ttf REQUIRED )
-FIND_PACKAGE( glm REQUIRED )
+
 
 ### DOCUMENTATION ###########################################################
 
@@ -120,7 +120,6 @@ IF( CED_SERVER )
       OpenGL::GL
       OpenGL::GLU
       SDL2_ttf::SDL2_ttf
-      glm::glm
     )
 
     INSTALL( TARGETS glced DESTINATION bin )
