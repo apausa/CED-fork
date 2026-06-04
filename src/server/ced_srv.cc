@@ -4,7 +4,7 @@
  * Alexey Zhelezov, DESY/ITEP, 2005 */
 
 /* Version 2 refactor changes:
- * - ced_solid_cone replaces glutSolidCone
+ * - fghCone replaces glutSolidCone
  * - font_render replaces renderBitmapString
  * - setting.font replaces built-in GLUT_BITMAP_TIMES_ROMAN_10
  * - SDL_Rect variable type handles screen width and height
@@ -2762,7 +2762,7 @@ static void ced_draw_cone_r(CED_ConeR * cone )  {
 
   	glRotated(180, 1.0, 0.0, 0.0);
   	glTranslated(0.0, 0.0, -(cone->height));
-	ced_solid_cone(base, height, slices, stacks)
+	fghCone((GLfloat)base, (GLfloat)height, slices, stacks);
 
     
 

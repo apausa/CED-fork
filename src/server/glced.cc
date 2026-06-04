@@ -39,7 +39,7 @@
  */
 
  /* Version 2 refactor changes:
-  * - Custom ced_solid_cone function replaces glutSolidCone
+  * - fghCone function replaces glutSolidCone
   * - SDL_Rect variable type handles screen width and height
   * - SDL_GetTicks replaces GLUT elapsed time
   * - SDL_GL_SwapWindow replaces glutSwapBuffers
@@ -411,7 +411,7 @@ static unsigned char z_bm[]={
 
 static void axe_arrow(void){
     GLfloat k=WORLD_SIZE/window_height;
-    ced_solid_cone(8.*k,30.*k,16,5);
+    fghCone(8.*k,30.*k,16,5);
 }
 
 static void display_world(void){
