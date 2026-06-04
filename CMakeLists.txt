@@ -72,9 +72,56 @@ MESSAGE( STATUS "CED_SERVER = ${CED_SERVER}" )
 
 IF( CED_SERVER )
 
+    IF( NOT OPENGL_FOUND )
+        MESSAGE( FATAL_ERROR "could not find package opengl required to build glced" )
+    ENDIF()
+
+    # copy paths from OPENGL_LIBRARIES to rpath list of glced to avoid system
+    # opengl libraries used in the linking process of glced to be overwritten
+    # by LD_LIBRARY_PATH, e.g.: LD_LIBRARY_PATH set by geant4 env_init_script
+    # points to old mesa libraries in afs
+    IF( NOT CED_NOT_INCLUDE_OPENGL_LINKER_PATH )
+      FOREACH( _opengl_lib ${OPENGL_LIBRARIES} )
+        GET_FILENAME_COMPONENT( _opengl_lib_path ${_opengl_lib} PATH )
+        # the RPATH to be used when installing, but only if it's not a system directory
+
+        LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES ${_opengl_lib_path} isSystemDir)
+        #MESSAGE( "isSystemDir: ${isSystemDir}" )
+        IF("${isSystemDir}" STREQUAL "-1")
+          LIST( APPEND _opengl_linker_paths ${_opengl_lib_path} )
+        ENDIF()
+      ENDFOREACH()
+
+      # remove duplicate paths
+      IF( _opengl_linker_paths )
+        LIST( REMOVE_DUPLICATES _opengl_linker_paths )
+      ENDIF()
+    ENDIF()
+
+    #MESSAGE( "_opengl_linker_paths: ${_opengl_linker_paths}" )
+
+    # this would affect all targets
+    #LIST( APPEND CMAKE_INSTALL_RPATH "${_opengl_linker_paths}" )
+    #IF( APPLE )
+    #    LIST( APPEND CMAKE_INSTALL_NAME_DIR "${_opengl_linker_paths}" )
+    #ENDIF()
+
     ADD_EXECUTABLE( glced ./src/server/glced.cc ./src/server/ced_srv.cc ./src/server/gl_font.cc ./src/server/freeSans.cc )
 
-    TARGET_LINK_LIBRARIES( glced CED SDL2::SDL2 OpenGL::GL OpenGL::GLU SDL2_ttf::SDL2_ttf glm::glm )
+    SET_TARGET_PROPERTIES( glced PROPERTIES
+        INSTALL_RPATH "${CMAKE_INSTALL_RPATH};${_opengl_linker_paths}"
+        INSTALL_NAME_DIR "${CMAKE_INSTALL_NAME_DIR};${_opengl_linker_paths}"
+    )
+
+    TARGET_LINK_LIBRARIES(
+      glced
+      CED
+      SDL2::SDL2
+      OpenGL::GL
+      OpenGL::GLU
+      SDL2_ttf::SDL2_ttf
+      glm::glm
+    )
 
     INSTALL( TARGETS glced DESTINATION bin )
 
