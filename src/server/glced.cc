@@ -43,7 +43,6 @@
   * - SDL_Rect variable type handles screen width and height
   * - SDL_GetTicks replaces GLUT elapsed time
   * - SDL_GL_SwapWindow replaces glutSwapBuffers
-  * - glLoadMatrixd replaces gluPerspective and gluLookAt
   * - ced_needs_redraw replaces glutPostRedisplay
   * - glutSetWindow function is no longer needed
   * - Removed phased out functions: timer, drawString, writeString, buildMenuPopup
@@ -1091,12 +1090,7 @@ static void reshape(int w,int h){
         //gluPerspective(60,window_width/window_height,100.0,50000.0*mm.sf+50000/mm.sf);
 
         //gluPerspective(45,window_width/window_height,100.0,50000.0*mm.sf+50000/mm.sf);
-        glLoadMatrixd(glm::value_ptr(glm::perspective(
-            glm::radians((double)CAMERA_FIELD_OF_VIEW),
-            (double)(window_width/window_height),
-            (double)CAMERA_MIN_DISTANCE,
-            (double)CAMERA_MAX_DISTANCE
-        )));
+        gluPerspective(CAMERA_FIELD_OF_VIEW,window_width/window_height,CAMERA_MIN_DISTANCE,CAMERA_MAX_DISTANCE);
 
         //gluPerspective(170,window_width/window_height,100.0,50000.0*mm.sf+50000/mm.sf);
 
@@ -1130,11 +1124,7 @@ static void reshape(int w,int h){
         //glBlendFunc(GL_ONE, GL_ZERO);
         //glEnable(GL_BLEND);
 
-        glLoadMatrixd(glm::value_ptr(glm::lookAt(
-            glm::dvec3(CAMERA_POSITION),
-            glm::dvec3(0,0,0), 
-            glm::dvec3(0,1,0)
-        )));
+        gluLookAt(CAMERA_POSITION,    0,0,0,    0,1,0);
     }
 
 
@@ -2132,7 +2122,7 @@ void subReshape (int w, int h)
   glViewport (0, 0, w, h);
   glMatrixMode (GL_PROJECTION);
   glLoadIdentity ();
-  glOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0);
+  gluOrtho2D(0.0F, 1.0F, 0.0F, 1.0F);
 };
 
 
@@ -4530,7 +4520,7 @@ void screenshot(const char *, int times)
                 }
 
                 glViewport(0,0,w,h);
-                glLoadMatrixd(glm::value_ptr(glm::lookAt(glm::dvec3(0,0,2000), glm::dvec3(0,0,0), glm::dvec3(0,1,0))));
+                gluLookAt(0,0,2000,    0,0,0,    0,1,0);
                 glViewport(0,0,w,h);
 
                 glMatrixMode(GL_MODELVIEW);
@@ -4581,7 +4571,7 @@ void screenshot(const char *, int times)
 
                 }
                 glViewport(0,0,w,h);
-                glLoadMatrixd(glm::value_ptr(glm::lookAt(glm::dvec3(0,0,2000), glm::dvec3(0,0,0), glm::dvec3(0,1,0))));
+                gluLookAt(0,0,2000,    0,0,0,    0,1,0);
                 glViewport(0,0,w,h);
                 glMatrixMode(GL_MODELVIEW);
                 write_world_into_front_buffer();
