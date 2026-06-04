@@ -6,6 +6,7 @@
 /* Version 2 refactor changes:
  * - ced_solid_cone replaces glutSolidCone
  * - font_render replaces renderBitmapString
+ * - setting.font replaces built-in GLUT_BITMAP_TIMES_ROMAN_10
  * - SDL_Rect variable type handles screen width and height
  * - SDL_GetTicks replaces GLUT elapsed time
  */
@@ -37,7 +38,7 @@
 #include <ced_glu.h>
 
 #define PORT  0x1234
-#define PI 3.14159265358979323846f
+#define PI 3.14159265358979323846f 
 
 extern bool ced_needs_redraw;
 
@@ -163,8 +164,7 @@ static void ced_add_objmap(CED_Point *p,int max_dxy, unsigned int ID, unsigned i
         }
 
     }
-    if(gluProject((GLdouble)p->x,(GLdouble)p->y,(GLdouble)p->z,
-            modelM,projM,viewport,&winx,&winy,&winz)!=GL_TRUE){
+    if(gluProject((GLdouble)p->x,(GLdouble)p->y,(GLdouble)p->z,modelM,projM,viewport,&winx,&winy,&winz)!=GL_TRUE){
         return;
     }
     omap[omap_count].ID=ID;
@@ -2407,7 +2407,7 @@ static void ced_draw_legend(CED_Legend *legend){
 	int x_offset_legend = 60;
 	int y_offset_legend = 20;
 	
-	int font = CED_FONT_SANS_20;
+	int font = setting.font;
   	int tick_size = 10;
 	
 	/**
