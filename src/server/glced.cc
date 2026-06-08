@@ -39,7 +39,7 @@
  */
 
  /* Version 2 refactor changes:
-  * - fghCone function replaces glutSolidCone
+  * - geoSolidCylinder replaces glutSolidCilinder
   * - SDL_Rect variable type handles screen width and height
   * - SDL_GetTicks replaces GLUT elapsed time
   * - SDL_GL_SwapWindow replaces glutSwapBuffers
@@ -63,15 +63,20 @@
   * - Replace GLUT bult-in socket monitoring with a non-blocking check for incoming client data
   * - font_get_width() and font_get_height() replace getFontDimensions()
   * - font_render() replaces drawHelpString() function
+  * - glMultMatrixf replaces gluLookAt
+  * - glOrtho replaces gluOrtho2D
+  * - glLoadMatrixf replaces gluPerspective
   */
 
- #ifdef __APPLE__
-    #include <OpenGL/gl.h>
-    #include <OpenGL/glu.h>
+#ifdef __APPLE__
+#  include <OpenGL/gl.h>
 #else
-    #include <GL/gl.h>
-    #include <GL/glu.h>
+#  include <GL/gl.h>
 #endif
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -85,12 +90,12 @@
 #include <ced.h>
 #include <ced_cli.h>
 #include <ced_config.h>
+#include <fg_geometry.h>
 
 #include <sys/select.h>
 
 #include <ctype.h>
 #include <sys/time.h>
-#include <time.h>
 #include <netdb.h>
 #include <iostream>
 #include <fstream>
@@ -100,7 +105,6 @@
 #include <iomanip>
 
 #include <SDL2/SDL.h>
-#include <ced_glu.h>
 #include <gl_font.h>
 
 #include <ced_menu.h>
@@ -276,7 +280,6 @@ static void set_bg_color(float one, float two, float three, float four){
 }
 
 static GLuint makeCylinder(struct _geoCylinder *c){
-    GLUquadricObj *q1 = gluNewQuadric();
     GLuint obj;
 
     glPushMatrix();
@@ -285,12 +288,9 @@ static GLuint makeCylinder(struct _geoCylinder *c){
     glTranslatef(0.0, 0.0, c->shift);
     if(c->rotate > 0.01 )
         glRotatef(c->rotate, 0, 0, 1);
-    gluQuadricNormals(q1, GL_SMOOTH);
-    gluQuadricTexture(q1, GL_TRUE);
-    gluCylinder(q1, c->d, c->d, c->z*2, c->sides, 1);
+    geoSolidCylinder(c->d, c->z*2, c->sides, 1); // @refactored: replace gluCylinder
     glEndList();
     glPopMatrix();
-    gluDeleteQuadric(q1);
     return obj;
 }
 
@@ -413,7 +413,7 @@ static unsigned char z_bm[]={
 
 static void axe_arrow(void){
     GLfloat k=WORLD_SIZE/window_height;
-    fghCone(8.*k,30.*k,16,5);
+    geoSolidCone(8.*k, 30.*k, 16, 5);
 }
 
 static void display_world(void){
@@ -1092,7 +1092,12 @@ static void reshape(int w,int h){
         //gluPerspective(60,window_width/window_height,100.0,50000.0*mm.sf+50000/mm.sf);
 
         //gluPerspective(45,window_width/window_height,100.0,50000.0*mm.sf+50000/mm.sf);
-        gluPerspective(CAMERA_FIELD_OF_VIEW,window_width/window_height,CAMERA_MIN_DISTANCE,CAMERA_MAX_DISTANCE);
+        glLoadMatrixf(glm::value_ptr(glm::perspective(
+            glm::radians((GLfloat)CAMERA_FIELD_OF_VIEW),
+            window_width/window_height,
+            (GLfloat)CAMERA_MIN_DISTANCE,
+            (GLfloat)(CAMERA_MAX_DISTANCE)
+        )));
 
         //gluPerspective(170,window_width/window_height,100.0,50000.0*mm.sf+50000/mm.sf);
 
@@ -1126,7 +1131,11 @@ static void reshape(int w,int h){
         //glBlendFunc(GL_ONE, GL_ZERO);
         //glEnable(GL_BLEND);
 
-        gluLookAt  (CAMERA_POSITION,    0,0,0,    0,1,0);
+        glMultMatrixf(glm::value_ptr(glm::lookAt(
+            glm::vec3(CAMERA_POSITION),
+            glm::vec3(0,0,0),
+            glm::vec3(0,1,0)
+        )));
     }
 
 
@@ -2007,7 +2016,7 @@ void subReshape (int w, int h)
   glViewport (0, 0, w, h);
   glMatrixMode (GL_PROJECTION);
   glLoadIdentity ();
-  gluOrtho2D (0.0F, 1.0F, 0.0F, 1.0F);
+  glOrtho(0.0F, 1.0F, 0.0F, 1.0F, -1.0, 1.0);
 };
 
 
@@ -4423,7 +4432,11 @@ void screenshot(const char *, int times)
                 }
 
                 glViewport(0,0,w,h);
-                gluLookAt(0,0,2000,    0,0,0,    0,1,0);
+                glMultMatrixf(glm::value_ptr(glm::lookAt(
+                    glm::vec3(0,0,2000),
+                    glm::vec3(0,0,0),
+                    glm::vec3(0,1,0)
+                )));
                 glViewport(0,0,w,h);
 
                 glMatrixMode(GL_MODELVIEW);
@@ -4474,7 +4487,11 @@ void screenshot(const char *, int times)
 
                 }
                 glViewport(0,0,w,h);
-                gluLookAt(0,0,2000,    0,0,0,    0,1,0);
+                glMultMatrixf(glm::value_ptr(glm::lookAt(
+                    glm::vec3(0,0,2000),
+                    glm::vec3(0,0,0),
+                    glm::vec3(0,1,0)
+                )));
                 glViewport(0,0,w,h);
                 glMatrixMode(GL_MODELVIEW);
                 write_world_into_front_buffer();
