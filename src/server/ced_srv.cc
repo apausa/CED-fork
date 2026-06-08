@@ -4,7 +4,9 @@
  * Alexey Zhelezov, DESY/ITEP, 2005 */
 
 /* Version 2 refactor changes:
- * - fghCone replaces glutSolidCone
+ * - Replaced glust_solid_cone with custom geoSolidCone
+ * - Replaced glutSPhere with custom geoSolidSphere 
+ * - Replaced glutCilynder with custom geoSolidCylinder
  * - font_render replaces renderBitmapString
  * - setting.font replaces built-in GLUT_BITMAP_TIMES_ROMAN_10
  * - SDL_Rect variable type handles screen width and height
@@ -16,11 +18,13 @@
 
 #ifdef __APPLE__
 #  include <OpenGL/gl.h>
-#  include <OpenGL/glu.h>
 #else
 #  include <GL/gl.h>
-#  include <GL/glu.h>
 #endif
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include <SDL2/SDL.h>
 #include <string.h>
@@ -28,16 +32,11 @@
 #include <stdio.h>
 #include <math.h>
 #include <ced_cli.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <unistd.h>
 
 #include <ced.h>
 #include <ced_config.h>
 #include <gl_font.h>
-#include <ced_glu.h>
+#include <fg_geometry.h>
 
 #define PORT  0x1234
 #define PI 3.14159265358979323846f 
@@ -166,8 +165,14 @@ static void ced_add_objmap(CED_Point *p,int max_dxy, unsigned int ID, unsigned i
         }
 
     }
-    if(gluProject((GLdouble)p->x,(GLdouble)p->y,(GLdouble)p->z,modelM,projM,viewport,&winx,&winy,&winz)!=GL_TRUE){
-        return;
+    {
+        glm::dvec3 win = glm::project(
+            glm::dvec3(p->x, p->y, p->z),
+            glm::make_mat4(modelM),
+            glm::make_mat4(projM),
+            glm::dvec4(viewport[0], viewport[1], viewport[2], viewport[3])
+        );
+        winx = win.x; winy = win.y; winz = win.z;
     }
     omap[omap_count].ID=ID;
     omap[omap_count].type=type;
@@ -519,7 +524,7 @@ void calNormals(point3d &n, point3d p1_, point3d p2_, point3d p3_){
     n.y=(p2.z*p3.x - p3.z*p2.x);
     n.z=(p2.x*p3.y - p3.x*p2.y);
     
-    double factor=1.0/pow(pow(n.x,2)+pow(n.y,2)+pow(n.z,2),0.5);
+    double factor=1.0/sqrt((double)n.x*n.x+(double)n.y*n.y+(double)n.z*n.z);
     n.x=factor*n.x;
     n.y=factor*n.y;
     n.z=factor*n.z;
@@ -1183,7 +1188,7 @@ int find_selected_object(int x,int y,GLfloat *wx,GLfloat *wy,GLfloat *wz, int *i
             
             //d=dx+dy;
 
-            d=(int) pow(pow(dx,2)+pow(dy,2)+pow(p->z/5.,2),0.5);
+            d=(int) sqrt((double)dx*dx+(double)dy*dy+(p->z/5.)*(p->z/5.));
             //d=dx+dy;
             if(!best || (d<dist)){
                 best=p;
@@ -1569,7 +1574,15 @@ static void ced_write_picking_text(CED_PICKING_TEXT *){
     winY = (float)viewport[3] - (float)y;
     glReadPixels( (int)x, int(winY), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ );
 
-    gluUnProject( winX, winY, winZ, modelview, projection, viewport, &posX, &posY, &posZ);
+    {
+        glm::dvec3 pos = glm::unProject(
+            glm::dvec3(winX, winY, winZ),
+            glm::make_mat4(modelview),
+            glm::make_mat4(projection),
+            glm::dvec4(viewport[0], viewport[1], viewport[2], viewport[3])
+        );
+        posX = pos.x; posY = pos.y; posZ = pos.z;
+    }
     std::cout << "x: " << posX << "Y: " << posY << "Z: " << posZ << std::endl;
 
 
@@ -1587,7 +1600,7 @@ static void ced_write_picking_text(CED_PICKING_TEXT *){
     glVertex3d(0,0,0);
     glVertex3d(10000,10000,10000);
     glEnd();
-    glutPostRedisplay();
+    ced_needs_redraw = true;
 
 
     std::cout << text->text << std::endl;
@@ -2008,29 +2021,20 @@ static void ced_draw_geotube(CED_GeoTube *c){
        glLineWidth(1.);
        //glLineWidth(detector_lines_wide);
 
-       GLUquadricObj *q1 = gluNewQuadric();
        ced_color(c->color);
-       glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);    
-     
+       glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
        glTranslatef(0.0, 0.0, transformed_shift);
 
        if(c->rotate_o > 0.01 ) glRotatef(c->rotate_o, 0, 0, 1);
 
-       gluQuadricNormals(q1, GL_SMOOTH);
-       gluQuadricTexture(q1, GL_TRUE);
-       
         if(c->classic_outer){
-            //gluCylinder(q1, d_o, d_o, z*2, c->edges_o > maxEdges?maxEdges:c->edges_o, 1);
-
-            gluCylinder(q1, d_o, d_o, z*2, c->edges_o, 1);
+            geoSolidCylinder(d_o, z*2, c->edges_o, 1); // @refactored: replace gluCylinder
         }
         if(d_i > 0 && c->classic_inner){
             if(c->rotate_o > 0.01 ) glRotatef(c->rotate_i, 0, 0, 1);
-            //gluCylinder(q1, d_i, d_i, z*2, c->edges_i>maxEdges?maxEdges:c->edges_i, 1); 
-            gluCylinder(q1, d_i, d_i, z*2, c->edges_i, 1); 
+            geoSolidCylinder(d_i, z*2, c->edges_i, 1); // @refactored: replace gluCylinder
         }
-
-        gluDeleteQuadric(q1);
 
     }
     glPopMatrix();
@@ -2044,23 +2048,17 @@ static unsigned GEOC_ID=0;
 
 static void ced_draw_geocylinder(CED_GeoCylinder *c){
   
-    GLUquadricObj *q1 = gluNewQuadric();
-  
     glPushMatrix();
     glLineWidth(1.);
     ced_color(c->color);
-    
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);    
-  
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
     double transformed_shift = single_fisheye_transform(c->shift, fisheye_alpha);
     glTranslatef(0.0, 0.0, transformed_shift);
-    //if(c->rotate > 0.01 )
-    //glRotatef(c->rotate, 0, 0, 1);
-    gluQuadricNormals(q1, GL_SMOOTH);
-    gluQuadricTexture(q1, GL_TRUE);
     //SM-H: Fisheye code
     double d = single_fisheye_transform(c->d, fisheye_alpha);
-  
+
     double z0 = transformed_shift;
     double z1 = single_fisheye_transform(c->z+c->shift, fisheye_alpha);
     double z = z1-z0;
@@ -2068,9 +2066,7 @@ static void ced_draw_geocylinder(CED_GeoCylinder *c){
     if(c->rotate > 0.01 ){
         glRotatef(c->rotate, 0, 0, 1);
     }
-    gluCylinder(q1, d, d, z*2, c->sides, 1);
-
-    gluDeleteQuadric(q1);
+    geoSolidCylinder(d, z*2, c->sides, 1); // @refactored: replace gluCylinder
 
     glPopMatrix();
 }
@@ -2082,36 +2078,30 @@ static unsigned GEOCR_ID=0;
 static void ced_draw_geocylinder_r(CED_GeoCylinderR *c){
     //FIXME: implement fisheye here as well
     //Non trivial due to possible rotations...
-    GLUquadricObj *q1 = gluNewQuadric();
-
     if(!IS_VISIBLE(c->layer)){
         return;
     }
 
     glLineWidth(1.);
     ced_color(c->color);
-  
+
     glPushMatrix();
-  
+
     glTranslated(c->center[0],c->center[1],c->center[2]);
-    
+
     glRotated(c->rotate[2], 0.0, 0.0, 1.0);
     glRotated(c->rotate[1], 0.0, 1.0, 0.0);
     glRotated(c->rotate[0], 1.0, 0.0, 0.0);
-    
+
     // center!
     glTranslated(0.0,0.0,-(c->z)/2);
-  
-  	glEnable(GL_BLEND);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);  
-        
-    gluQuadricNormals(q1, GL_SMOOTH);
-    gluQuadricTexture(q1, GL_TRUE);
-    gluCylinder(q1, c->d, c->d, c->z, c->sides, 1);
-    //gluCylinder(q1, c->d, c->d, c->z, 1000, 1000);
-  
+
+    glEnable(GL_BLEND);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    geoSolidCylinder(c->d, c->z, c->sides, 1);
+
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    gluDeleteQuadric(q1);
   
   	//glDisable(GL_BLEND);
     glEnd();
@@ -2145,13 +2135,6 @@ static void ced_draw_ellipsoid_r(CED_EllipsoidR * eli )  {
     /** Quadric object */
    	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  	GLUquadricObj *Sphere;
-  	
-  	/** Obtain a new quadric */
-	Sphere = gluNewQuadric();
-  	gluQuadricNormals(Sphere, GLU_SMOOTH);
-  	gluQuadricTexture(Sphere, GL_TRUE);
-
     /** Set polygon's filling */
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -2161,14 +2144,10 @@ static void ced_draw_ellipsoid_r(CED_EllipsoidR * eli )  {
 	/** Draw the cone */
 	glEnable(GL_BLEND);
 
-	 /** Alter scale factors so as to obtain an ellipsoid from a sphere */
+	/** Alter scale factors so as to obtain an ellipsoid from a sphere */
 	glScaled(eli->size[0]/2, eli->size[1]/2, eli->size[2]/2);
 
-  	/**Draw the sphere */
-	gluSphere(Sphere, 1.0, slices, stacks);
-
-    //glDisable(GL_BLEND); //hauke test
-    gluDeleteQuadric(Sphere);
+	geoSolidSphere(1.0, slices, stacks);
     glPopMatrix();
   	glEndList();	
 }
@@ -2501,7 +2480,7 @@ static void ced_draw_legend(CED_Legend *legend){
 			/** Mid-tick legend generation: LOG */
 			switch(scale){
 				case 'a': default:			
-					num = pow( (ene_max +1)/(ene_min +1), (float)tickNumber/(float)ticks ) * (ene_min+1) - 1;
+					num = pow( (double)(ene_max +1)/(ene_min +1), (double)tickNumber/(double)ticks ) * (ene_min+1) - 1;
 				break;
 				/** LIN */
 				case 'b':
@@ -2764,7 +2743,7 @@ static void ced_draw_cone_r(CED_ConeR * cone )  {
 
   	glRotated(180, 1.0, 0.0, 0.0);
   	glTranslated(0.0, 0.0, -(cone->height));
-	fghCone((GLfloat)base, (GLfloat)height, slices, stacks);
+	geoSolidCone(base, height, slices, stacks);
 
     
 
