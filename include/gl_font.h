@@ -1,9 +1,9 @@
 #ifndef GL_FONT_H
 #define GL_FONT_H
 
-#define CED_FONT_SANS_16 16  // XS
-#define CED_FONT_SANS_20 20  // S
-#define CED_FONT_SANS_24 24  // M
+#define CED_FONT_SANS_16 16 // xs
+#define CED_FONT_SANS_20 20 // s
+#define CED_FONT_SANS_24 24 // m
 
 void font_init();
 void font_clean();
