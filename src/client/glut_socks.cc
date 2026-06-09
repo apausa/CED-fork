@@ -7,6 +7,11 @@
  *            is temporary not available
  */
 
+ /* Version 2 refactor changes:
+  * - Replaced __glutSockets linked list with a single connection
+  * - Thus, removed add_socket() and delete_socket() functions
+ */ 
+
 char trusted_hosts[50]; 
 
 #include "ced.h"
@@ -28,18 +33,11 @@ char trusted_hosts[50];
 #include <arpa/inet.h>
 #include <netdb.h>
 
- /* Version 2 refactor changes:
-  * Removed __glutSockets linked list
-  * Removed add_socket and delete_socket
-  * Created tcp_server_accept
- */ 
-
 static int _server_fd = -1;
-static void (*_pending_user_func)(void *) = nullptr; // user callback registered via tcp_server()
+static void (*_on_event)(void *) = nullptr;
 
-int socket_fd = -1; // active fd: server socket while waiting, client socket once connected
-void (*socket_fn)(void) = nullptr; // swaps between tcp_server_accept and tcp_server_read
-
+int socket_fd = -1; 
+void (*socket_fn)(void) = nullptr;
 bool client_connected=false;
 
 static void tcp_server_accept(void); // forward declaration
@@ -83,11 +81,11 @@ static void tcp_server_read(void){
     fprintf(stderr,"INFO: client is disconnected\n");
     close(socket_fd);
     client_connected=false;
-    socket_fd=_server_fd;
-    socket_fn=tcp_server_accept;
+    socket_fd=_server_fd; // listening socket
+    socket_fn=tcp_server_accept; // ready for the server
     return;
   }
-  _pending_user_func(buf);
+  _on_event(buf); // callback when new data is received
 }
 
 static void tcp_server_accept(void){
@@ -130,10 +128,10 @@ static void tcp_server_accept(void){
     return;
   }
 
-  socket_fd=fd;
-  socket_fn=tcp_server_read;
+  socket_fd=fd; // client socket
+  socket_fn=tcp_server_read; // reading from the server
   fprintf(stderr,"INFO: new client - socketID: %d\n", fd);
-  _pending_user_func(0);
+  _on_event(0); // callback when a new client connects
 }  
 
 /* API */
@@ -169,7 +167,7 @@ int tcp_server(unsigned short port,
     return -1;
   }
   _server_fd=fd;
-  _pending_user_func=user_func;
+  _on_event=user_func;
   socket_fd=_server_fd;
   socket_fn=tcp_server_accept;
   return 0;
