@@ -13,9 +13,8 @@ DESCRIPTION:
 
  /* Version 2 refactor changes:
   * - ced_needs_redraw replaces glutPostRedisplay
-  * - SDL_Rect variable type handles screen width and height
   * - font_get_width() and font_get_height() replace getFontDimensions()
-  * - font_render() replaces drawHelpString() funhction
+  * - font_render() replaces drawHelpString() function
   */
 
 #ifndef __CED_MENU
