@@ -28,45 +28,23 @@ char trusted_hosts[50];
 #include <arpa/inet.h>
 #include <netdb.h>
 
+ /* Version 2 refactor changes:
+  * Removed __glutSockets linked list
+  * Removed add_socket and delete_socket
+  * Created tcp_server_accept
+ */ 
 
-struct __glutSocketList {
-  struct __glutSocketList *next;
-  int fd;
-  void  (*read_func)(struct __glutSocketList *sock);
-} *__glutSockets=0;
+static int _server_fd = -1;
+static void (*_pending_user_func)(void *) = nullptr; // user callback registered via tcp_server()
 
+int socket_fd = -1; // active fd: server socket while waiting, client socket once connected
+void (*socket_fn)(void) = nullptr; // swaps between tcp_server_accept and tcp_server_read
 
 bool client_connected=false;
 
-static void add_socket(struct __glutSocketList *sock){
-  sock->next=__glutSockets;
-  __glutSockets=sock;
-}
+static void tcp_server_accept(void); // forward declaration
 
-static void delete_socket(struct __glutSocketList *sock){
-  struct __glutSocketList *list=__glutSockets;
-  if(list==sock){
-    __glutSockets=sock->next;
-  } else {
-    while(list->next && (list->next!=sock))
-      list=list->next;
-    if(!list->next){
-      fprintf(stderr,"ERROR: attempt to delete unknown socket\n");
-      return;
-    }
-    list->next=sock->next;
-  }
-  sock->next=0;
-  free(sock);
-}
-
-/* internal, TCP server */
-typedef struct {
-  struct __glutSocketList list;
-  void (*user_func)(void *data);
-} tcp_srv_sock;
-
-static void tcp_server_read(struct __glutSocketList *list){
+static void tcp_server_read(void){
   static unsigned char *buf=0;
   static unsigned buf_size=0;
   unsigned got_sum;
@@ -76,7 +54,7 @@ static void tcp_server_read(struct __glutSocketList *list){
     buf=(unsigned char *)(realloc(buf,8));
     buf_size=8;
   }
-  if((size=read(list->fd,buf,8))){
+  if((size=read(socket_fd,buf,8))){
     need_size=*((unsigned *)buf);
     //if((need_size >=8) && (need_size<10000000)){
     if((need_size >=8)) { //&& (need_size<1000000000)){
@@ -87,7 +65,7 @@ static void tcp_server_read(struct __glutSocketList *list){
 	}
 	got_sum=8;
 	while(got_sum<(unsigned)need_size){
-	    size=read(list->fd,buf+got_sum,need_size-got_sum);
+	    size=read(socket_fd,buf+got_sum,need_size-got_sum);
 	    if(size <= 0){
 	      if (errno == EAGAIN)
 		continue; // keep trying..
@@ -103,24 +81,22 @@ static void tcp_server_read(struct __glutSocketList *list){
   }
   if(need_size<8){
     fprintf(stderr,"INFO: client is disconnected\n");
-    close(list->fd);
-    delete_socket(list);
+    close(socket_fd);
     client_connected=false;
+    socket_fd=_server_fd;
+    socket_fn=tcp_server_accept;
     return;
   }
-  (*(((tcp_srv_sock *)list)->user_func))(buf);
+  _pending_user_func(buf);
 }
 
-static void tcp_server_accept(struct __glutSocketList *list){
+static void tcp_server_accept(void){
   int fd;
-  tcp_srv_sock *nl;
-  struct sockaddr_in myclient;  
+  struct sockaddr_in myclient;
   unsigned int size=sizeof(myclient);
-;
-  
 
-  //fd=accept(list->fd,0,0);
-  fd=accept(list->fd,(struct sockaddr *)&myclient, &size);
+  //fd=accept(_server_fd,0,0);
+  fd=accept(_server_fd,(struct sockaddr *)&myclient, &size);
   //fd=accept(list->fd, &myclient, &size);
 
   //printf("New connection from: %s\n", inet_ntoa(myclient.sin_addr));
@@ -154,23 +130,19 @@ static void tcp_server_accept(struct __glutSocketList *list){
     return;
   }
 
-  nl=(tcp_srv_sock *) malloc(sizeof(*nl));
-  nl->list.fd=fd;
-  nl->list.read_func=tcp_server_read;
-  nl->user_func=((tcp_srv_sock *)list)->user_func;
-  add_socket(&nl->list);
-  fprintf(stderr,"INFO: new client - socketID: %d\n", nl->list.fd  );
-  (*(((tcp_srv_sock *)list)->user_func))(0);
+  socket_fd=fd;
+  socket_fn=tcp_server_read;
+  fprintf(stderr,"INFO: new client - socketID: %d\n", fd);
+  _pending_user_func(0);
 }  
 
 /* API */
-int glut_tcp_server(unsigned short port,
+int tcp_server(unsigned short port,
 		    void (*user_func)(void *data)){
   int fd=socket(PF_INET,SOCK_STREAM,0);
   struct sockaddr_in addr;
   int one=1;
   long flags;
-  tcp_srv_sock *list;
 
 #ifdef __APPLE__
   setsockopt(fd,IPPROTO_TCP,TCP_NODELAY,&one,sizeof(one));
@@ -196,10 +168,9 @@ int glut_tcp_server(unsigned short port,
     close(fd);
     return -1;
   }
-  list=(tcp_srv_sock*) malloc(sizeof(*list));
-  list->list.fd=fd;
-  list->list.read_func=tcp_server_accept;
-  list->user_func=user_func;
-  add_socket(&list->list);
+  _server_fd=fd;
+  _pending_user_func=user_func;
+  socket_fd=_server_fd;
+  socket_fn=tcp_server_accept;
   return 0;
 }
