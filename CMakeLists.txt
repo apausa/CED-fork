@@ -19,14 +19,13 @@ SET( ${PROJECT_NAME}_VERSION_PATCH 0 )
 
 FIND_PACKAGE( ILCUTIL COMPONENTS ILCSOFT_CMAKE_MODULES REQUIRED )
 
-# load default settings from ILCSOFT_CMAKE_MODULES
-INCLUDE( ilcsoft_default_settings )
-
 FIND_PACKAGE( SDL2 REQUIRED )
+FIND_PACKAGE( SDL2_ttf REQUIRED )
 FIND_PACKAGE( OpenGL REQUIRED )
 FIND_PACKAGE( glm REQUIRED )
-FIND_PACKAGE( SDL2_ttf REQUIRED )
 
+# load default settings from ILCSOFT_CMAKE_MODULES
+INCLUDE( ilcsoft_default_settings )
 
 ### DOCUMENTATION ###########################################################
 
@@ -81,11 +80,10 @@ IF( CED_SERVER )
     # opengl libraries used in the linking process of glced to be overwritten
     # by LD_LIBRARY_PATH, e.g.: LD_LIBRARY_PATH set by geant4 env_init_script
     # points to old mesa libraries in afs
-    IF( NOT CED_NOT_INCLUDE_OPENGL_LINKER_PATH )
+    IF( NOT CED_NOT_INCLUDE_OPENGL_LINKER_PATH ) 
       FOREACH( _opengl_lib ${OPENGL_LIBRARIES} )
         GET_FILENAME_COMPONENT( _opengl_lib_path ${_opengl_lib} PATH )
         # the RPATH to be used when installing, but only if it's not a system directory
-
         LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES ${_opengl_lib_path} isSystemDir)
         #MESSAGE( "isSystemDir: ${isSystemDir}" )
         IF("${isSystemDir}" STREQUAL "-1")
