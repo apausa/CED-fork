@@ -153,7 +153,8 @@ class CED_SubSubMenu{
                     glColor3f(0,0,0);
                 }else{
                     font_render(
-                        setting.font, x_start+3,
+                        setting.font,
+                        x_start+3,
                         y_start+height-height/5,
                         title.substr(0,int(fabs((x_end-x_start)/width))).c_str()
                     );
@@ -237,7 +238,7 @@ class CED_SubSubMenu{
                 return;
             }
             cout << "       delete subsubmenus (" << subsubMenus.size() << " submenus)" <<  endl;
-            for(unsigned i=1;i<subsubMenus.size();i++){
+            for(unsigned i=0;i<subsubMenus.size();i++){
                 cout << "           delete: " << subsubMenus.at(i)->title <<   endl;
                 delete subsubMenus.at(i);
                 subsubMenus.at(i)=NULL;
@@ -298,7 +299,12 @@ class CED_SubMenu{
                     glEnd();
                     glColor3f(0,0,0);
                 }else{
-                    font_render(setting.font, x_start+3, y_start+height-height/5, title.c_str());
+                    font_render(
+                        setting.font,
+                        x_start+3,
+                        y_start+height-height/5,
+                        title.c_str()
+                    );
                 }
 
                 //drawHelpString(title, x_start+3, y_start+height-height/5);
@@ -522,23 +528,13 @@ class CED_Menu{
 
         void addSubMenu(CED_SubMenu *sub){
             int height = font_get_height(setting.font);
+            int width  = font_get_width(setting.font, "A");
 
-            double length=10;
-            if(setting.font==CED_FONT_SANS_16){
-                length=4.8;
-            }
-            if(setting.font==CED_FONT_SANS_20){
-                length=5.2;
-            }
-            if(setting.font==CED_FONT_SANS_24){
-                length=10.0;
-            }
-
-            sub->x_start=x_offset;
-            sub->y_start=1;
-            sub->y_end=height+1;
-            x_offset+=(unsigned)(sub->title.length()*length+3*length);
-            sub->x_end=x_offset;
+            sub->x_start = x_offset;
+            sub->y_start = 1;
+            sub->y_end = height + 1;
+            x_offset += sub->title.length() * width + 3 * width;
+            sub->x_end = x_offset;
             subMenus.push_back(sub);
             x_offset+=5;
         }
@@ -547,7 +543,7 @@ class CED_Menu{
         }
         ~CED_Menu(){
             cout << "delete ced menu" <<  endl;
-            for(int i=0;(unsigned) i<subMenus.size();){
+            for(int i=0;(unsigned) i<subMenus.size();i++){
                 delete subMenus.at(i);
             }
         }
