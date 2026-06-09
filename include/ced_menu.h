@@ -530,11 +530,11 @@ class CED_Menu{
             int height = font_get_height(setting.font);
             int width  = font_get_width(setting.font, "A");
 
-            sub->x_start = x_offset;
-            sub->y_start = 1;
-            sub->y_end = height + 1;
+            sub->x_start=x_offset;
+            sub->y_start=1;
+            sub->y_end=height+1;
             x_offset += sub->title.length() * width + 3 * width;
-            sub->x_end = x_offset;
+            sub->x_end=x_offset;
             subMenus.push_back(sub);
             x_offset+=5;
         }
