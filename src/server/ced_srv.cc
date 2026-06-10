@@ -4,17 +4,15 @@
  * Alexey Zhelezov, DESY/ITEP, 2005 */
 
 /* Version 2 refactor changes:
+ * - Replaced gluProject with glm::project()
+ * - font_render replaces renderBitmapString
+ * - SDL_GetTicks() replaces glutGet(GLUT_ELAPSED_TIME)
+ * - Replaced glutCilynder with custom geoSolidCylinder
  * - Replaced glust_solid_cone with custom geoSolidCone
  * - Replaced glutSPhere with custom geoSolidSphere 
- * - Replaced glutCilynder with custom geoSolidCylinder
- * - font_render replaces renderBitmapString
  * - setting.font replaces built-in GLUT_BITMAP_TIMES_ROMAN_10
  * - SDL_Rect variable type handles screen width and height
- * - SDL_GetTicks replaces GLUT elapsed time
  */
-
-#include <iostream>
-#include <vector>
 
 #ifdef __APPLE__
 #  include <OpenGL/gl.h>
@@ -32,6 +30,8 @@
 #include <stdio.h>
 #include <math.h>
 #include <ced_cli.h>
+#include <iostream>
+#include <vector>
 
 #include <ced.h>
 #include <ced_config.h>
@@ -172,7 +172,10 @@ static void ced_add_objmap(CED_Point *p,int max_dxy, unsigned int ID, unsigned i
             glm::make_mat4(projM),
             glm::dvec4(viewport[0], viewport[1], viewport[2], viewport[3])
         );
-        winx = win.x; winy = win.y; winz = win.z;
+
+        winx = win.x;
+        winy = win.y;
+        winz = win.z;
     }
     omap[omap_count].ID=ID;
     omap[omap_count].type=type;
@@ -524,7 +527,7 @@ void calNormals(point3d &n, point3d p1_, point3d p2_, point3d p3_){
     n.y=(p2.z*p3.x - p3.z*p2.x);
     n.z=(p2.x*p3.y - p3.x*p2.y);
     
-    double factor=1.0/sqrt((double)n.x*n.x+(double)n.y*n.y+(double)n.z*n.z);
+    double factor=1.0/pow(pow(n.x,2)+pow(n.y,2)+pow(n.z,2),0.5);
     n.x=factor*n.x;
     n.y=factor*n.y;
     n.z=factor*n.z;
@@ -1188,7 +1191,7 @@ int find_selected_object(int x,int y,GLfloat *wx,GLfloat *wy,GLfloat *wz, int *i
             
             //d=dx+dy;
 
-            d=(int) sqrt((double)dx*dx+(double)dy*dy+(p->z/5.)*(p->z/5.));
+            d=(int) pow(pow(dx,2)+pow(dy,2)+pow(p->z/5.,2),0.5);
             //d=dx+dy;
             if(!best || (d<dist)){
                 best=p;
@@ -1574,15 +1577,7 @@ static void ced_write_picking_text(CED_PICKING_TEXT *){
     winY = (float)viewport[3] - (float)y;
     glReadPixels( (int)x, int(winY), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ );
 
-    {
-        glm::dvec3 pos = glm::unProject(
-            glm::dvec3(winX, winY, winZ),
-            glm::make_mat4(modelview),
-            glm::make_mat4(projection),
-            glm::dvec4(viewport[0], viewport[1], viewport[2], viewport[3])
-        );
-        posX = pos.x; posY = pos.y; posZ = pos.z;
-    }
+    gluUnProject( winX, winY, winZ, modelview, projection, viewport, &posX, &posY, &posZ);
     std::cout << "x: " << posX << "Y: " << posY << "Z: " << posZ << std::endl;
 
 
@@ -2022,8 +2017,8 @@ static void ced_draw_geotube(CED_GeoTube *c){
        //glLineWidth(detector_lines_wide);
 
        ced_color(c->color);
-       glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
+       glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);    
+     
        glTranslatef(0.0, 0.0, transformed_shift);
 
        if(c->rotate_o > 0.01 ) glRotatef(c->rotate_o, 0, 0, 1);
@@ -2035,7 +2030,6 @@ static void ced_draw_geotube(CED_GeoTube *c){
             if(c->rotate_o > 0.01 ) glRotatef(c->rotate_i, 0, 0, 1);
             geoSolidCylinder(d_i, z*2, c->edges_i, 1); // @refactored: replace gluCylinder
         }
-
     }
     glPopMatrix();
 }
@@ -2051,14 +2045,14 @@ static void ced_draw_geocylinder(CED_GeoCylinder *c){
     glPushMatrix();
     glLineWidth(1.);
     ced_color(c->color);
-
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
+    
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);    
+  
     double transformed_shift = single_fisheye_transform(c->shift, fisheye_alpha);
     glTranslatef(0.0, 0.0, transformed_shift);
     //SM-H: Fisheye code
     double d = single_fisheye_transform(c->d, fisheye_alpha);
-
+  
     double z0 = transformed_shift;
     double z1 = single_fisheye_transform(c->z+c->shift, fisheye_alpha);
     double z = z1-z0;
@@ -2066,7 +2060,7 @@ static void ced_draw_geocylinder(CED_GeoCylinder *c){
     if(c->rotate > 0.01 ){
         glRotatef(c->rotate, 0, 0, 1);
     }
-    geoSolidCylinder(d, z*2, c->sides, 1); // @refactored: replace gluCylinder
+    geoSolidCylinder(d, z*2, c->sides, 1);
 
     glPopMatrix();
 }
@@ -2084,15 +2078,15 @@ static void ced_draw_geocylinder_r(CED_GeoCylinderR *c){
 
     glLineWidth(1.);
     ced_color(c->color);
-
+  
     glPushMatrix();
-
+  
     glTranslated(c->center[0],c->center[1],c->center[2]);
-
+    
     glRotated(c->rotate[2], 0.0, 0.0, 1.0);
     glRotated(c->rotate[1], 0.0, 1.0, 0.0);
     glRotated(c->rotate[0], 1.0, 0.0, 0.0);
-
+    
     // center!
     glTranslated(0.0,0.0,-(c->z)/2);
 
@@ -2480,7 +2474,7 @@ static void ced_draw_legend(CED_Legend *legend){
 			/** Mid-tick legend generation: LOG */
 			switch(scale){
 				case 'a': default:			
-					num = pow( (double)(ene_max +1)/(ene_min +1), (double)tickNumber/(double)ticks ) * (ene_min+1) - 1;
+					num = pow( (ene_max +1)/(ene_min +1), (float)tickNumber/(float)ticks ) * (ene_min+1) - 1;
 				break;
 				/** LIN */
 				case 'b':

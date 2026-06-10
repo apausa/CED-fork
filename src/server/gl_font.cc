@@ -19,14 +19,15 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
-/* 
- * These functions have been kept after adapting them to SDL2 
+/*  Version 2 refactor changes:
+ *
+ * 1 These functions have been kept after adapting them to SDL2 
  * - _SDL_GL_Enter2DMode
  * - _SDL_GL_Leave2DMode
  * - _power_of_two 
  * - _SDL_GL_LoadTexture
  * 
- * These functions were added to adapt it to the project.
+ * 2 These functions were added with the original code as reference
  * - _font_open
  * - _font_get
  * - font_init
