@@ -40,13 +40,30 @@
 
  /* Version 2 refactor changes:
   * - geoSolidCylinder replaces glutSolidCilinder
-  * - SDL_Rect variable type handles screen width and height
+  * - geoSolidCone replaces glutSolidCone
+  * - SDL_GetDisplayBounds() handles screen width and height
+  * - font_render() replaces drawHelpString() function
   * - SDL_GetTicks replaces GLUT elapsed time
   * - SDL_GL_SwapWindow replaces glutSwapBuffers
+  * - glLoadMatrixf() funtion replaces gluPerspective()
+  * - glMultMatrixf() function replaces gluLookAt()
   * - ced_needs_redraw replaces glutPostRedisplay
+  * - events MOUSE_DOWN, MOUSE_LEFT, MOUSE_RIGHT, MOUSE_MIDDLE replace GLUT_MOUSE_*
   * - glutSetWindow function is no longer needed
+  * - events KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN replace GLUT_KEY_*
   * - Removed phased out functions: timer, drawString, writeString, buildMenuPopup
+  * - glOrtho replaces gluOrtho2D
+  * - font_get_width() and font_get_height() replace getFontDimensions()
   * - Removed GLUT native menu handle glutSetMenu
+  * - idle_func replaces glutIdleFunc
+  * - Event type SDL_WINDOWEVENT replaces glutReshapeFunc(reshape)
+  * - Event type SDL_KEYDOWN replaces glutKeyboardFunc(keypressed) and glutSpecialFunc(SpecialKey)
+  * - Event type SDL_MOUSE replaces glutMouseFunc(mouse);
+  * - Event type SDL_MOUSEMOTION replaces glutMotionFunc(motion) and glutPassiveMotionFunc(mouse_passive)
+  * - Event type SDL_MOUSEWHEEL replaces glutMouseWheelFunc(mouseWheel)
+  * - Replace GLUT built-in socket monitoring with a non-blocking check for incoming data
+
+
   * - SDL_Init replaces glutInit
   * - SDL_GL_SetAttribute calls replace glutInitDisplayMode
   * - Removed -geometry flag because SDL2 doesn't parse it natively like GLUT
@@ -54,18 +71,7 @@
   * - Call SDL_GL_CreateContext as SDL2 separates it from window creation
   * - Call SDL_GL_SetSwapInterval for vsync control
   * - display() function replaces glutDisplayFunc(display)
-  * - Event type SDL_WINDOWEVENT replaces glutReshapeFunc(reshape)
-  * - Event type SDL_KEYDOWN replaces glutKeyboardFunc(keypressed) and glutSpecialFunc(SpecialKey)
-  * - Event type SDL_MOUSE replaces glutMouseFunc(mouse);
-  * - Event type SDL_MOUSEMOTION replaces glutMotionFunc(motion) and glutPassiveMotionFunc(mouse_passive)
-  * - Event type SDL_MOUSEWHEEL replaces glutMouseWheelFunc(mouseWheel)
-  * - idle_func replaces glutIdleFunc
-  * - Replace GLUT bult-in socket monitoring with a non-blocking check for incoming client data
-  * - font_get_width() and font_get_height() replace getFontDimensions()
-  * - font_render() replaces drawHelpString() function
-  * - glMultMatrixf replaces gluLookAt
-  * - glOrtho replaces gluOrtho2D
-  * - glLoadMatrixf replaces gluPerspective
+
   */
 
 #ifdef __APPLE__
@@ -91,6 +97,8 @@
 #include <ced_cli.h>
 #include <ced_config.h>
 #include <fg_geometry.h>
+#include <SDL2/SDL.h>
+#include <gl_font.h>
 
 #include <sys/select.h>
 
@@ -104,8 +112,6 @@
 #include <sstream>
 #include <iomanip>
 
-#include <SDL2/SDL.h>
-#include <gl_font.h>
 
 #include <ced_menu.h>
 
@@ -117,7 +123,6 @@ using namespace std;
 static int numpict=0;
 
 int ced_picking(int x,int y,GLfloat *wx,GLfloat *wy,GLfloat *wz); //from ced_srv.c, need header files!
-
 
 
 //*************** global variables ***************************************//
@@ -196,7 +201,7 @@ static float userDefinedBGColor[] = {-1.0, -1.0, -1.0, -1.0};
 
 static unsigned int iBGcolor = 0;
 
-extern int  socket_fd;
+extern int socket_fd;
 extern void (*socket_fn)(void);
 extern bool client_connected;
 
