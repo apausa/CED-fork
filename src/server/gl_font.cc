@@ -52,9 +52,9 @@
 extern const unsigned char freesans_otf[];
 extern const unsigned int  freesans_otf_len;
 
-static TTF_Font *_font_sans_16 = NULL;
-static TTF_Font *_font_sans_20 = NULL;
-static TTF_Font *_font_sans_24 = NULL;
+static TTF_Font *_font_sans_s = NULL;
+static TTF_Font *_font_sans_m = NULL;
+static TTF_Font *_font_sans_l = NULL;
 
 static void _SDL_GL_Enter2DMode(int width, int height)
 {
@@ -175,9 +175,9 @@ static TTF_Font *_font_open(int ptsize)
 static TTF_Font *_font_get(int font_id)
 {
     switch (font_id) {
-        case CED_FONT_SANS_16: return _font_sans_16;
-        case CED_FONT_SANS_20: return _font_sans_20;
-        default: return _font_sans_24;
+        case CED_FONT_SANS_S: return _font_sans_s;
+        case CED_FONT_SANS_M: return _font_sans_m;
+        default: return _font_sans_l;
     }
 }
 
@@ -188,9 +188,9 @@ void font_init()
         return;
     }
 
-    _font_sans_16 = _font_open(16);
-    _font_sans_20 = _font_open(20);
-    _font_sans_24 = _font_open(24);
+    _font_sans_s = _font_open(CED_FONT_SANS_S);
+    _font_sans_m = _font_open(CED_FONT_SANS_M);
+    _font_sans_l = _font_open(CED_FONT_SANS_L);
 }
 
 void font_render(int font_id, float x, float y, const char *text)
@@ -250,14 +250,14 @@ int font_get_width(int font_id, const char *text)
 
 void font_clean()
 {
-    TTF_CloseFont(_font_sans_16);
-    _font_sans_16 = NULL;
+    TTF_CloseFont(_font_sans_s);
+    _font_sans_s = NULL;
 
-    TTF_CloseFont(_font_sans_20);
-    _font_sans_20 = NULL;
+    TTF_CloseFont(_font_sans_m);
+    _font_sans_m = NULL;
 
-    TTF_CloseFont(_font_sans_24);
-    _font_sans_24 = NULL;
+    TTF_CloseFont(_font_sans_l);
+    _font_sans_l = NULL;
 
     TTF_Quit();
 }
