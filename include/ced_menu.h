@@ -154,7 +154,7 @@ class CED_SubSubMenu{
                     font_render(
                         setting.font,
                         x_start+3,
-                        y_start+height-height/5,
+                        y_start,
                         title.substr(0,int(fabs((x_end-x_start)/width))).c_str()
                     );
                 }
@@ -301,7 +301,7 @@ class CED_SubMenu{
                     font_render(
                         setting.font,
                         x_start+3,
-                        y_start+height-height/5,
+                        y_start,
                         title.c_str()
                     );
                 }
