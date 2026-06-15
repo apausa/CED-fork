@@ -62,12 +62,10 @@
   * - Event type SDL_MOUSEMOTION replaces glutMotionFunc(motion) and glutPassiveMotionFunc(mouse_passive)
   * - Event type SDL_MOUSEWHEEL replaces glutMouseWheelFunc(mouseWheel)
   * - Replace GLUT built-in socket monitoring with a non-blocking check for incoming data
-
-
+  * - Force SDL2 to use the native Wayland backend 
   * - SDL_Init replaces glutInit
   * - SDL_GL_SetAttribute calls replace glutInitDisplayMode
   * - Removed -geometry flag because SDL2 doesn't parse it natively like GLUT
-  * - Force SDL2 to use the native Wayland backend 
   * - Call SDL_GL_CreateContext as SDL2 separates it from window creation
   * - Call SDL_GL_SetSwapInterval for vsync control
   * - display() function replaces glutDisplayFunc(display)
@@ -1285,7 +1283,7 @@ void defaultSettings(void){
         }
 
 
-        setting.font=CED_FONT_SANS_20;
+        setting.font=CED_FONT_SANS_S;
 
         for(int i=0; i < CED_MAX_LAYER; i++){
             setting.layer[i]=true; // turn all layers on
@@ -2561,17 +2559,17 @@ void selectFromMenu(int id){ //hauke
             break;
 
         case FONT0:
-            setting.font=CED_FONT_SANS_16;
+            setting.font=CED_FONT_SANS_S;
             //buildMainMenu();
             break;
 
         case FONT1:
-            setting.font=CED_FONT_SANS_20;
+            setting.font=CED_FONT_SANS_M;
             //buildMainMenu();
             break;
 
         case FONT2:
-            setting.font=CED_FONT_SANS_24;
+            setting.font=CED_FONT_SANS_L;
             //buildMainMenu();
             break;
 
@@ -3784,20 +3782,20 @@ void buildMainMenu(void){
     settings->addItem(new CED_SubSubMenu("---",0));
 
     CED_SubSubMenu *font=new CED_SubSubMenu("Text font size ");
-    if(setting.font == 0){
-        font->addItem(new CED_SubSubMenu("[X] Tiny",FONT0));
+    if(setting.font == CED_FONT_SANS_S){
+        font->addItem(new CED_SubSubMenu("[X] Small",FONT0));
     }else{
-        font->addItem(new CED_SubSubMenu("[ ] Tiny",FONT0));
+        font->addItem(new CED_SubSubMenu("[ ] Small",FONT0));
     }
-    if(setting.font == 1){
-        font->addItem(new CED_SubSubMenu("[X] Normal",FONT1));
+    if(setting.font == CED_FONT_SANS_M){
+        font->addItem(new CED_SubSubMenu("[X] Medium",FONT1));
     }else{
-        font->addItem(new CED_SubSubMenu("[ ] Normal",FONT1));
+        font->addItem(new CED_SubSubMenu("[ ] Medium",FONT1));
     }
-    if(setting.font == 2){
-        font->addItem(new CED_SubSubMenu("[X] Big",FONT2));
+    if(setting.font == CED_FONT_SANS_L){
+        font->addItem(new CED_SubSubMenu("[X] Large",FONT2));
     }else{
-        font->addItem(new CED_SubSubMenu("[ ] Big",FONT2));
+        font->addItem(new CED_SubSubMenu("[ ] Large",FONT2));
     }
     settings->addItem(font);
 
