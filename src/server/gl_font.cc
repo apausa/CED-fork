@@ -21,14 +21,14 @@
 
 /*  Version 2 refactor changes:
  *
- * 1 These functions have been kept after adapting them to SDL2 
+ * 1 These functions were kept after adapting them to SDL2 
  * - _SDL_GL_Enter2DMode
  * - _SDL_GL_Leave2DMode
  * - _power_of_two 
  * - _SDL_GL_LoadTexture
  * 
- * 2 These functions were added with the original code as reference
- * - _font_open
+ * 2 These functions were added
+ * - _font_resolve 
  * - _font_get
  * - font_init
  * - font_render
@@ -47,14 +47,12 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <fontconfig/fontconfig.h>
 #include <gl_font.h>
 
-extern const unsigned char freesans_otf[];
-extern const unsigned int  freesans_otf_len;
-
-static TTF_Font *_font_sans_s = NULL;
-static TTF_Font *_font_sans_m = NULL;
-static TTF_Font *_font_sans_l = NULL;
+static TTF_Font *_font_s = NULL;
+static TTF_Font *_font_m = NULL;
+static TTF_Font *_font_l = NULL;
 
 static void _SDL_GL_Enter2DMode(int width, int height)
 {
@@ -164,20 +162,38 @@ static GLuint SDL_GL_LoadTexture(SDL_Surface *surface, GLfloat *texcoord)
     return texture;
 }
 
-// Load the font from the embedded byte array to a given size
-static TTF_Font *_font_open(int ptsize)
+static const char *_font_resolve(void)
 {
-    SDL_RWops *rw = SDL_RWFromConstMem(freesans_otf, (int)freesans_otf_len);
-    return rw ? TTF_OpenFontRW(rw, 1, ptsize) : NULL;
+    static char path[1024];
+    FcPattern *pat = FcNameParse((const FcChar8 *)"monospace"); // Write query
+    
+    FcConfigSubstitute(NULL, pat, FcMatchPattern); // Increase the scope of available fonts
+    FcDefaultSubstitute(pat);
+
+    FcResult result;
+    FcPattern *match = FcFontMatch(NULL, pat, &result); // Query font
+
+    if (match) {
+        FcChar8 *file;
+
+        if (FcPatternGetString(match, FC_FILE, 0, &file) == FcResultMatch)
+            snprintf(path, sizeof(path), "%s", (char *)file);
+
+        FcPatternDestroy(match);
+    }
+
+    FcPatternDestroy(pat); // Function called for every pattern created
+
+    return path[0] ? path : NULL;
 }
 
 // Map a font ID to its loaded TTF_Font
 static TTF_Font *_font_get(int font_id)
 {
     switch (font_id) {
-        case CED_FONT_SANS_S: return _font_sans_s;
-        case CED_FONT_SANS_M: return _font_sans_m;
-        default: return _font_sans_l;
+        case FONT_S: return _font_s;
+        case FONT_M: return _font_m;
+        default: return _font_l;
     }
 }
 
@@ -188,9 +204,16 @@ void font_init()
         return;
     }
 
-    _font_sans_s = _font_open(CED_FONT_SANS_S);
-    _font_sans_m = _font_open(CED_FONT_SANS_M);
-    _font_sans_l = _font_open(CED_FONT_SANS_L);
+    const char *path = _font_resolve();
+
+    if (!path) {
+        fprintf(stderr, "fontconfig: could not find monospace font\n");
+        return;
+    }
+
+    _font_s = TTF_OpenFont(path, FONT_S);
+    _font_m = TTF_OpenFont(path, FONT_M);
+    _font_l = TTF_OpenFont(path, FONT_L);
 }
 
 void font_render(int font_id, float x, float y, const char *text)
@@ -250,14 +273,15 @@ int font_get_width(int font_id, const char *text)
 
 void font_clean()
 {
-    TTF_CloseFont(_font_sans_s);
-    _font_sans_s = NULL;
+    TTF_CloseFont(_font_s);
+    _font_s = NULL;
 
-    TTF_CloseFont(_font_sans_m);
-    _font_sans_m = NULL;
+    TTF_CloseFont(_font_m);
+    _font_m = NULL;
 
-    TTF_CloseFont(_font_sans_l);
-    _font_sans_l = NULL;
+    TTF_CloseFont(_font_l);
+    _font_l = NULL;
 
     TTF_Quit();
+    FcFini();
 }
