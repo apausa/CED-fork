@@ -1283,7 +1283,7 @@ void defaultSettings(void){
         }
 
 
-        setting.font=CED_FONT_SANS_S;
+        setting.font=FONT_S;
 
         for(int i=0; i < CED_MAX_LAYER; i++){
             setting.layer[i]=true; // turn all layers on
@@ -2559,17 +2559,17 @@ void selectFromMenu(int id){ //hauke
             break;
 
         case FONT0:
-            setting.font=CED_FONT_SANS_S;
+            setting.font=FONT_S;
             //buildMainMenu();
             break;
 
         case FONT1:
-            setting.font=CED_FONT_SANS_M;
+            setting.font=FONT_M;
             //buildMainMenu();
             break;
 
         case FONT2:
-            setting.font=CED_FONT_SANS_L;
+            setting.font=FONT_L;
             //buildMainMenu();
             break;
 
@@ -3782,17 +3782,17 @@ void buildMainMenu(void){
     settings->addItem(new CED_SubSubMenu("---",0));
 
     CED_SubSubMenu *font=new CED_SubSubMenu("Text font size ");
-    if(setting.font == CED_FONT_SANS_S){
+    if(setting.font == FONT_S){
         font->addItem(new CED_SubSubMenu("[X] Small",FONT0));
     }else{
         font->addItem(new CED_SubSubMenu("[ ] Small",FONT0));
     }
-    if(setting.font == CED_FONT_SANS_M){
+    if(setting.font == FONT_M){
         font->addItem(new CED_SubSubMenu("[X] Medium",FONT1));
     }else{
         font->addItem(new CED_SubSubMenu("[ ] Medium",FONT1));
     }
-    if(setting.font == CED_FONT_SANS_L){
+    if(setting.font == FONT_L){
         font->addItem(new CED_SubSubMenu("[X] Large",FONT2));
     }else{
         font->addItem(new CED_SubSubMenu("[ ] Large",FONT2));
