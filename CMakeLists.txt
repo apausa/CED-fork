@@ -23,6 +23,7 @@ FIND_PACKAGE( SDL2 REQUIRED )
 FIND_PACKAGE( SDL2_ttf REQUIRED )
 FIND_PACKAGE( OpenGL REQUIRED )
 FIND_PACKAGE( glm REQUIRED )
+FIND_PACKAGE( Fontconfig REQUIRED )
 
 # load default settings from ILCSOFT_CMAKE_MODULES
 INCLUDE( ilcsoft_default_settings )
@@ -105,7 +106,7 @@ IF( CED_SERVER )
     #    LIST( APPEND CMAKE_INSTALL_NAME_DIR "${_opengl_linker_paths}" )
     #ENDIF()
 
-    ADD_EXECUTABLE(glced ./src/server/glced.cc ./src/server/ced_srv.cc ./src/server/gl_font.cc ./src/server/freeSans.cc ./src/server/fg_geometry.cc )
+    ADD_EXECUTABLE(glced ./src/server/glced.cc ./src/server/ced_srv.cc ./src/server/gl_font.cc ./src/server/fg_geometry.cc )
 
     SET_TARGET_PROPERTIES( glced PROPERTIES
         INSTALL_RPATH "${CMAKE_INSTALL_RPATH};${_opengl_linker_paths}"
@@ -119,6 +120,7 @@ IF( CED_SERVER )
       OpenGL::GL
       SDL2_ttf::SDL2_ttf
       glm::glm
+      Fontconfig::Fontconfig
     )
 
     INSTALL( TARGETS glced DESTINATION bin )
