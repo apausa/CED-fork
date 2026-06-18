@@ -24,7 +24,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -2339,7 +2339,7 @@ static void ced_draw_legend(CED_Legend *legend){
     glLoadIdentity();
 
     SDL_Rect display_bounds;
-    SDL_GetDisplayBounds(0, &display_bounds);
+    SDL_GetDisplayBounds(SDL_GetPrimaryDisplay(), &display_bounds);
     GLfloat w = (GLfloat)display_bounds.w;
     GLfloat h = (GLfloat)display_bounds.h;
 
