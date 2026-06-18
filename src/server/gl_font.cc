@@ -21,7 +21,7 @@
 
 /*  Version 2 refactor changes:
  *
- * 1 These functions were kept after adapting them to SDL2 
+ * 1 These functions were kept after adapting them to SDL3
  * - _SDL_GL_Enter2DMode
  * - _SDL_GL_Leave2DMode
  * - _power_of_two 
@@ -45,8 +45,8 @@
 #  include <GL/gl.h>
 #endif
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
+#include <SDL3/SDL.h>
+#include <SDL3_ttf/SDL_ttf.h>
 #include <fontconfig/fontconfig.h>
 #include <gl_font.h>
 
@@ -122,7 +122,7 @@ static GLuint SDL_GL_LoadTexture(SDL_Surface *surface, GLfloat *texcoord)
     texcoord[2] = (GLfloat)surface->w / w;  /* Max X */
     texcoord[3] = (GLfloat)surface->h / h;  /* Max Y */
 
-    image = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA32);
+    image = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_RGBA32);
     if (image == NULL) {
         return 0;
     }
@@ -157,7 +157,7 @@ static GLuint SDL_GL_LoadTexture(SDL_Surface *surface, GLfloat *texcoord)
              GL_RGBA,
              GL_UNSIGNED_BYTE,
              image->pixels);
-    SDL_FreeSurface(image); /* No longer needed */
+    SDL_DestroySurface(image); /* No longer needed */
 
     return texture;
 }
@@ -199,8 +199,8 @@ static TTF_Font *_font_get(int font_id)
 
 void font_init()
 {
-    if (TTF_Init() != 0) {
-        fprintf(stderr, "Couldn't initialize TTF: %s\n", TTF_GetError());
+    if (!TTF_Init()) {
+        fprintf(stderr, "Couldn't initialize TTF: %s\n", SDL_GetError());
         return;
     }
 
@@ -224,14 +224,14 @@ void font_render(int font_id, float x, float y, const char *text)
     glGetFloatv(GL_CURRENT_COLOR, col); // read the current GL draw color
 
     SDL_Color color = {(Uint8)(col[0]*255), (Uint8)(col[1]*255), (Uint8)(col[2]*255), 255};
-    SDL_Surface *surf = TTF_RenderUTF8_Blended(font, text, color); // rasterize text to a CPU surface
+    SDL_Surface *surf = TTF_RenderText_Blended(font, text, 0, color); // rasterize text to a CPU surface
 
     if (!surf) return;
 
     int w = surf->w, h = surf->h; // pixel dimensions of the rendered text
     GLfloat texcoord[4];
     GLuint texture = SDL_GL_LoadTexture(surf, texcoord); // upload surface to a GL texture
-    SDL_FreeSurface(surf); // free surface from CPU
+    SDL_DestroySurface(surf); // free surface from CPU
     
     if (!texture) return;
 
@@ -256,7 +256,7 @@ int font_get_height(int font_id)
     TTF_Font *font = _font_get(font_id);
 
     int w = 0, h = 0;
-    TTF_SizeUTF8(font, "A", &w, &h);
+    TTF_GetStringSize(font, "A", 0, &w, &h);
 
     return h;
 }
@@ -266,7 +266,7 @@ int font_get_width(int font_id, const char *text)
     TTF_Font *font = _font_get(font_id);
 
     int w = 0, h = 0;
-    TTF_SizeUTF8(font, text, &w, &h);
+    TTF_GetStringSize(font, text, 0, &w, &h);
 
     return w;
 }
