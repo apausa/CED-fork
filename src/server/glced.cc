@@ -56,11 +56,12 @@
   * - font_get_width() and font_get_height() replace getFontDimensions()
   * - Removed GLUT native menu handle glutSetMenu
   * - idle_func replaces glutIdleFunc
-  * - Event type SDL_WINDOWEVENT replaces glutReshapeFunc(reshape)
-  * - Event type SDL_KEYDOWN replaces glutKeyboardFunc(keypressed) and glutSpecialFunc(SpecialKey)
-  * - Event type SDL_MOUSE replaces glutMouseFunc(mouse);
-  * - Event type SDL_MOUSEMOTION replaces glutMotionFunc(motion) and glutPassiveMotionFunc(mouse_passive)
-  * - Event type SDL_MOUSEWHEEL replaces glutMouseWheelFunc(mouseWheel)
+  * - Event type SDL_EVENT_WINDOW_RESIZED and SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED replace glutReshapeFunc(reshape)
+  * - Event type SDL_EVENT_TEXT_INPUT replaces glutKeyboardFunc(keypressed)
+  * - Event type SDL_EVENT_KEY_DOWN replaces glutSpecialFunc(SpecialKey)
+  * - Event type SDL_EVENT_MOUSE_BUTTON_* replaces glutMouseFunc(mouse);
+  * - Event type SDL_EVENT_MOUSE_MOTION replaces glutMotionFunc(motion) and glutPassiveMotionFunc(mouse_passive)
+  * - Event type SDL_EVENT_MOUSE_WHEEL replaces glutMouseWheelFunc(mouseWheel)
   * - Replace GLUT built-in socket monitoring with a non-blocking check for incoming data
   * - Force SDL2 to use the native Wayland backend 
   * - SDL_Init replaces glutInit
@@ -95,7 +96,7 @@
 #include <ced_cli.h>
 #include <ced_config.h>
 #include <fg_geometry.h>
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <gl_font.h>
 
 #include <sys/select.h>
@@ -548,7 +549,7 @@ void printFPS(void){
     glLoadIdentity();
 
     SDL_Rect display_bounds;
-    SDL_GetDisplayBounds(0, &display_bounds);
+    SDL_GetDisplayBounds(SDL_GetPrimaryDisplay(), &display_bounds);
     GLfloat w = (GLfloat)display_bounds.w;
     GLfloat h = (GLfloat)display_bounds.h;
 
@@ -3937,20 +3938,22 @@ static void mainLoop(SDL_GLContext gl_context)
         while (SDL_PollEvent(&ev)) {
             switch (ev.type) {
 
-            case SDL_QUIT:
+            case SDL_EVENT_QUIT:
                 running = false;
                 break;
 
-            case SDL_WINDOWEVENT: // Replaces glutReshapeFunc(reshape)
-                if (ev.window.event == SDL_WINDOWEVENT_RESIZED ||
-                    ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-                    reshape(ev.window.data1, ev.window.data2);
-                    ced_needs_redraw = true;
-                }
+            case SDL_EVENT_WINDOW_RESIZED:           // Replaces glutReshapeFunc(reshape)
+            case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+                reshape(ev.window.data1, ev.window.data2);
+                ced_needs_redraw = true;
                 break;
 
-            case SDL_KEYDOWN: { // Replaces glutKeyboardFunc(keypressed) and glutSpecialFunc(SpecialKey);
-                SDL_Keycode sym = ev.key.keysym.sym;
+            case SDL_EVENT_TEXT_INPUT: // Printable characters (replaces glutKeyboardFunc(keypressed))
+                keypressed((unsigned char)ev.text.text[0], 0, 0);
+                break;
+
+            case SDL_EVENT_KEY_DOWN: { // Special keys and Ctrl + letter shortcuts (replaces glutSpecialFunc(SpecialKey))
+                SDL_Keycode sym = ev.key.key;
                 int special = -1;
                 switch (sym) {
                     case SDLK_RIGHT: special = KEY_RIGHT; break;
@@ -3966,34 +3969,33 @@ static void mainLoop(SDL_GLContext gl_context)
                 }
                 if (special >= 0) {
                     SpecialKey(special, 0, 0);
-                } else if (sym >= 0 && sym < 256) {
-                    unsigned char key = (unsigned char)sym;
-                    if (ev.key.keysym.mod & KMOD_CTRL) {
-                        if (sym >= SDLK_a && sym <= SDLK_z)
-                            key = (unsigned char)(sym - SDLK_a + 1);
+                } else if (ev.key.mod & SDL_KMOD_CTRL) {
+                    SDL_Scancode sc = ev.key.scancode;
+                    if (sc >= SDL_SCANCODE_A && sc <= SDL_SCANCODE_Z) {
+                        unsigned char key = (unsigned char)(sc - SDL_SCANCODE_A + 1);
+                        keypressed(key, 0, 0);
                     }
-                    keypressed(key, 0, 0);
                 }
                 break;
             }
 
-            case SDL_MOUSEBUTTONDOWN: // Replaces glutMouseFunc(mouse);
-            case SDL_MOUSEBUTTONUP: {
+            case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            case SDL_EVENT_MOUSE_BUTTON_UP: {
                 int btn   = ev.button.button - 1;
-                int state = (ev.type == SDL_MOUSEBUTTONDOWN) ? MOUSE_DOWN : MOUSE_UP;
-                mouse(btn, state, ev.button.x, ev.button.y);
+                int state = (ev.type == SDL_EVENT_MOUSE_BUTTON_DOWN) ? MOUSE_DOWN : MOUSE_UP;
+                mouse(btn, state, (int)ev.button.x, (int)ev.button.y);
                 break;
             }
 
-            case SDL_MOUSEMOTION: // Replaces glutMotionFunc(motion) and glutPassiveMotionFunc(mouse_passive)
+            case SDL_EVENT_MOUSE_MOTION:
                 if (ev.motion.state != 0) {
-                    motion(ev.motion.x, ev.motion.y); 
+                    motion((int)ev.motion.x, (int)ev.motion.y);
                 } else {
-                    mouse_passive(ev.motion.x, ev.motion.y); 
+                    mouse_passive((int)ev.motion.x, (int)ev.motion.y);
                 }
                 break;
 
-            case SDL_MOUSEWHEEL: { // Replaces glutMouseWheelFunc(mouseWheel);
+            case SDL_EVENT_MOUSE_WHEEL: {
                 int dir = (ev.wheel.y > 0) ? 1 : -1;
                 mouseWheel(0, dir, 0, 0);
                 break;
@@ -4035,14 +4037,15 @@ static void mainLoop(SDL_GLContext gl_context)
     }
 
     font_clean();
-    SDL_GL_DeleteContext(gl_context);
+    SDL_StopTextInput(ced_sdl_window);
+    SDL_GL_DestroyContext(gl_context);
     SDL_DestroyWindow(ced_sdl_window);
     ced_sdl_window = nullptr;
     SDL_Quit();
 }
 
 int main(int argc,char *argv[]){
-#ifndef __APPLE__
+#ifndef SDL_PLATFORM_APPLE
     setenv("SDL_VIDEODRIVER", "wayland", 0);
 
     // SDL's Wayland backend initializes xkbcommon directly as part of SDL_Init() to handle
@@ -4206,8 +4209,6 @@ int main(int argc,char *argv[]){
 
     ced_sdl_window = SDL_CreateWindow(
         "C Event Display (CED)",
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
         setting.win_w,
         setting.win_h,
         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
@@ -4227,6 +4228,7 @@ int main(int argc,char *argv[]){
     }
 
     SDL_GL_SetSwapInterval(1); // vsync control
+    SDL_StartTextInput(ced_sdl_window);
 
     //glHint (GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
     //glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
