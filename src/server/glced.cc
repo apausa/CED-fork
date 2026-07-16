@@ -41,7 +41,7 @@
  /* Version 2 refactor changes:
   * - geoSolidCylinder replaces glutSolidCilinder
   * - geoSolidCone replaces glutSolidCone
-  * - SDL_GetDisplayBounds() handles screen width and height
+  * - SDL_Rect type handles screen width and height
   * - font_render() replaces drawHelpString() function
   * - SDL_GetTicks replaces GLUT elapsed time
   * - SDL_GL_SwapWindow replaces glutSwapBuffers
@@ -62,12 +62,12 @@
   * - Event type SDL_EVENT_MOUSE_BUTTON_* replaces glutMouseFunc(mouse);
   * - Event type SDL_EVENT_MOUSE_MOTION replaces glutMotionFunc(motion) and glutPassiveMotionFunc(mouse_passive)
   * - Event type SDL_EVENT_MOUSE_WHEEL replaces glutMouseWheelFunc(mouseWheel)
-  * - Replace GLUT built-in socket monitoring with a non-blocking check for incoming data
-  * - Force SDL2 to use the native Wayland backend 
+  * - Replace GLUT built-in socket monitoring with a single socket.
+  * - Force  to use the native Wayland backend 
   * - SDL_Init replaces glutInit
   * - SDL_GL_SetAttribute calls replace glutInitDisplayMode
-  * - Removed -geometry flag because SDL2 doesn't parse it natively like GLUT
-  * - Call SDL_GL_CreateContext as SDL2 separates it from window creation
+  * - Removed -geometry flag because SDL3 doesn't parse it natively like GLUT
+  * - Call SDL_GL_CreateContext as SDL3 separates it from window creation
   * - Call SDL_GL_SetSwapInterval for vsync control
   * - display() function replaces glutDisplayFunc(display)
 
@@ -3942,7 +3942,7 @@ static void mainLoop(SDL_GLContext gl_context)
                 running = false;
                 break;
 
-            case SDL_EVENT_WINDOW_RESIZED:           // Replaces glutReshapeFunc(reshape)
+            case SDL_EVENT_WINDOW_RESIZED: // Replaces glutReshapeFunc(reshape)
             case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
                 reshape(ev.window.data1, ev.window.data2);
                 ced_needs_redraw = true;
@@ -4214,7 +4214,7 @@ int main(int argc,char *argv[]){
         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
     );
 
-    SDL_GLContext gl_context = SDL_GL_CreateContext(ced_sdl_window); // SDL2 separates window creation from context creation
+    SDL_GLContext gl_context = SDL_GL_CreateContext(ced_sdl_window); // SDL separates window creation from context creation
     
     if (!gl_context) {
         fprintf(
