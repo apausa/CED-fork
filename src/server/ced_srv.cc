@@ -7,11 +7,12 @@
  * - Replaced gluProject with glm::project()
  * - font_render replaces renderBitmapString
  * - SDL_GetTicks() replaces glutGet(GLUT_ELAPSED_TIME)
+ * - Screen-size lookup changes to SDL_GetDisplayBounds.
  * - Replaced glutCilynder with custom geoSolidCylinder
- * - Replaced glust_solid_cone with custom geoSolidCone
- * - Replaced glutSPhere with custom geoSolidSphere 
+ * - Replaced glut_solid_cone with custom geoSolidCone
+ * - Replaced glutSphere with custom geoSolidSphere 
  * - setting.font replaces built-in GLUT_BITMAP_TIMES_ROMAN_10
- * - SDL_Rect variable type handles screen width and height
+ * - glOrtho replaces gluOrtho2D
  */
 
 #ifdef __APPLE__
