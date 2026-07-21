@@ -15,6 +15,7 @@ DESCRIPTION:
   * - ced_needs_redraw replaces glutPostRedisplay
   * - font_get_width() and font_get_height() replace getFontDimensions()
   * - font_render() replaces drawHelpString() function
+  * - Bring down menu to account for title bar
   */
 
 #ifndef __CED_MENU
@@ -28,6 +29,8 @@ extern CEDsettings setting;
 extern GLfloat window_width;
 extern GLfloat window_height;
 extern bool ced_needs_redraw;
+
+static constexpr int CED_TITLE_BAR_HEIGHT = 24;
 
 class CED_SubSubMenu{
     public:
@@ -464,10 +467,10 @@ class CED_Menu{
 
 
             glBegin(GL_QUADS);
-            glVertex3f(0, 0,0);
-            glVertex3f(0,height,0);
-            glVertex3f(w,height,0);
-            glVertex3f(w,0,0);
+            glVertex3f(0, CED_TITLE_BAR_HEIGHT,0);
+            glVertex3f(0,CED_TITLE_BAR_HEIGHT+height,0);
+            glVertex3f(w,CED_TITLE_BAR_HEIGHT+height,0);
+            glVertex3f(w,CED_TITLE_BAR_HEIGHT,0);
             glEnd();
 
 
@@ -478,8 +481,8 @@ class CED_Menu{
             //glVertex3f(1,1,0);
             //glVertex3f(1,10,0);
 
-            glVertex3f(1,height+1,0);
-            glVertex3f(w-1,height+1,0);
+            glVertex3f(1,CED_TITLE_BAR_HEIGHT+height+1,0);
+            glVertex3f(w-1,CED_TITLE_BAR_HEIGHT+height+1,0);
 
             //glVertex3f(w-1,8,0);
             //glVertex3f(w-1,1,0);
@@ -530,8 +533,8 @@ class CED_Menu{
             int width  = font_get_width(setting.font, "A");
 
             sub->x_start=x_offset;
-            sub->y_start=1;
-            sub->y_end=height+1;
+            sub->y_start=CED_TITLE_BAR_HEIGHT+1;
+            sub->y_end=CED_TITLE_BAR_HEIGHT+height+1;
             x_offset += sub->title.length() * width + 3 * width;
             sub->x_end=x_offset;
             subMenus.push_back(sub);
@@ -540,6 +543,9 @@ class CED_Menu{
         CED_Menu(){
             x_offset=1;
         }
+
+        unsigned totalWidth() const { return x_offset; } // expose the menu width so glced.cc can exclude it from the window drag region
+        
         ~CED_Menu(){
             cout << "delete ced menu" <<  endl;
             for(int i=0;(unsigned) i<subMenus.size();i++){
