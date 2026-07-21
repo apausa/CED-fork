@@ -70,7 +70,7 @@
   * - Call SDL_GL_CreateContext as SDL3 separates it from window creation
   * - Call SDL_GL_SetSwapInterval for vsync control
   * - display() function replaces glutDisplayFunc(display)
-
+  * - draw_ced_title_bar() replaces the window decoration lost when moving away from X11 to Wayland
   */
 
 #ifdef __APPLE__
@@ -814,6 +814,42 @@ void printShortcuts(void){
 
 }
 
+static void draw_ced_title_bar(void){
+    GLfloat w = window_width;
+    GLfloat h = window_height;
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix(); 
+    glLoadIdentity(); 
+
+    glOrtho(0, w, h, 0, 0, 15000); // Define the projection matrix
+
+    glMatrixMode(GL_MODELVIEW); 
+    glPushMatrix();
+    glLoadIdentity();
+
+    glDisable(GL_DEPTH_TEST); // Turn off depth testing, so graphic renders on top of the 3D scene
+
+    glColor3f(0.20f, 0.20f, 0.20f); // Set color to dark gray
+    glBegin(GL_QUADS); // Draw the header rectangle
+        glVertex3f(0, 0, 0);
+        glVertex3f(0, CED_TITLE_BAR_HEIGHT, 0);
+        glVertex3f(w, CED_TITLE_BAR_HEIGHT, 0);
+        glVertex3f(w, 0, 0);
+    glEnd();
+
+    glColor3f(0.80f, 0.80f, 0.80f); // Set color to light gray
+    font_render(setting.font, 6, 3, "C Event Display (CED)"); // Draw the header title
+
+    glEnable(GL_DEPTH_TEST); // Turn on depth testing, so the 3D scene renders normally on the next frame
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+}
+
 static void display(void){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glPushMatrix();
@@ -851,6 +887,7 @@ static void display(void){
 
 
     glDisable(GL_LIGHTING);
+    draw_ced_title_bar();
     ced_menu->draw();
     popupmenu->draw();
     printFPS();
