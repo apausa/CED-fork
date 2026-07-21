@@ -70,7 +70,11 @@
   * - Call SDL_GL_CreateContext as SDL3 separates it from window creation
   * - Call SDL_GL_SetSwapInterval for vsync control
   * - display() function replaces glutDisplayFunc(display)
-  * - draw_ced_title_bar() replaces the window decoration lost when moving away from X11 to Wayland
+  *
+  * - GNOME's compositor doesn't draw title bars on Wayland
+  *   - So draw_ced_title_bar() creates a title bar
+  *   - And ced_window_hit_test() adds window dragging. And resizing functionality
+  *   - as window is now borderless for this change.
   */
 
 #ifdef __APPLE__
@@ -814,7 +818,7 @@ void printShortcuts(void){
 
 }
 
-static void draw_ced_title_bar(void){
+static void draw_ced_title_bar(void){ 
     GLfloat w = window_width;
     GLfloat h = window_height;
 
@@ -3965,6 +3969,31 @@ void buildMainMenu(void){
     ced_menu->addSubMenu(help);
 }
 
+static const int kResizeBorder = 6;
+
+static SDL_HitTestResult SDLCALL ced_window_hit_test(SDL_Window *win, const SDL_Point *pt, void *data){
+    int w, h;
+    SDL_GetWindowSize(win, &w, &h);
+
+    bool left = pt->x < kResizeBorder;
+    bool right = pt->x >= w - kResizeBorder;
+    bool top = pt->y < kResizeBorder;
+    bool bottom = pt->y >= h - kResizeBorder;
+
+    if(top && left) return SDL_HITTEST_RESIZE_TOPLEFT;
+    if(top && right) return SDL_HITTEST_RESIZE_TOPRIGHT;
+    if(bottom && left) return SDL_HITTEST_RESIZE_BOTTOMLEFT;
+    if(bottom && right) return SDL_HITTEST_RESIZE_BOTTOMRIGHT;
+    if(left) return SDL_HITTEST_RESIZE_LEFT;
+    if(right) return SDL_HITTEST_RESIZE_RIGHT;
+    if(bottom) return SDL_HITTEST_RESIZE_BOTTOM;
+    if(top) return SDL_HITTEST_RESIZE_TOP;
+
+    if(pt->y < CED_TITLE_BAR_HEIGHT) return SDL_HITTEST_DRAGGABLE;
+
+    return SDL_HITTEST_NORMAL;
+}
+
 static void mainLoop(SDL_GLContext gl_context)
 {
     bool running = true;
@@ -4248,8 +4277,10 @@ int main(int argc,char *argv[]){
         "C Event Display (CED)",
         setting.win_w,
         setting.win_h,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
+        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_BORDERLESS
     );
+
+    SDL_SetWindowHitTest(ced_sdl_window, ced_window_hit_test, nullptr); // Implement drag and resize via hit-testing since the window is now borderless
 
     SDL_GLContext gl_context = SDL_GL_CreateContext(ced_sdl_window); // SDL separates window creation from context creation
     
