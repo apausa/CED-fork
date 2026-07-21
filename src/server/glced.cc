@@ -1284,7 +1284,7 @@ void defaultSettings(void){
         }
 
 
-        setting.font=FONT_S;
+        setting.font=FONT_M;
 
         for(int i=0; i < CED_MAX_LAYER; i++){
             setting.layer[i]=true; // turn all layers on
