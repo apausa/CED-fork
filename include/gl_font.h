@@ -1,9 +1,9 @@
 #ifndef GL_FONT_H
 #define GL_FONT_H
 
-#define FONT_S 16
-#define FONT_M 20
-#define FONT_L 24
+#define FONT_S 12
+#define FONT_M 14
+#define FONT_L 16
 
 void font_init();
 void font_clean();
