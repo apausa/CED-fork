@@ -84,6 +84,9 @@ void toggleHelpWindow(void);//glced.c
 void updateLayerEntryInPopupMenu(int); //glced.c
 int buildMenuPopup(void);//glced.c
 
+// glut_socks.cc
+int  tcp_server(unsigned short port, void (*user_func)(void *data));
+
 
 #define VERSION_CONFIG 3
 struct CEDsettings{

@@ -2,42 +2,47 @@
  * Server side elements definitions.
  *
  * Alexey Zhelezov, DESY/ITEP, 2005 */
-#include<iostream>
+
+/* Version 2 refactor changes:
+ * - Replaced gluProject with glm::project()
+ * - font_render replaces renderBitmapString
+ * - SDL_GetTicks() replaces glutGet(GLUT_ELAPSED_TIME)
+ * - Screen-size lookup changes to SDL_GetDisplayBounds.
+ * - Replaced glutCilynder with custom geoSolidCylinder
+ * - Replaced glut_solid_cone with custom geoSolidCone
+ * - Replaced glutSphere with custom geoSolidSphere 
+ * - setting.font replaces built-in GLUT_BITMAP_TIMES_ROMAN_10
+ * - glOrtho replaces gluOrtho2D
+ */
 
 #ifdef __APPLE__
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#include <GLUT/glut.h>
+#  include <OpenGL/gl.h>
 #else
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <X11/Xlib.h>
-#include <GL/glut.h>
+#  include <GL/gl.h>
 #endif
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include <SDL3/SDL.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <errno.h>
 #include <ced_cli.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <vector>
 #include <iostream>
+#include <vector>
 
 #include <ced.h>
 #include <ced_config.h>
-#include <unistd.h>
-#include <stdio.h>
-//#include <malloc.h> // obsolete header file
+#include <gl_font.h>
+#include <fg_geometry.h>
 
 #define PORT  0x1234
 #define PI 3.14159265358979323846f 
 
+extern bool ced_needs_redraw;
 
 //hauke
 //int graphic[3];
@@ -161,8 +166,17 @@ static void ced_add_objmap(CED_Point *p,int max_dxy, unsigned int ID, unsigned i
         }
 
     }
-    if(gluProject((GLdouble)p->x,(GLdouble)p->y,(GLdouble)p->z, modelM,projM,viewport,&winx,&winy,&winz)!=GL_TRUE){
-        return;
+    {
+        glm::dvec3 win = glm::project(
+            glm::dvec3(p->x, p->y, p->z),
+            glm::make_mat4(modelM),
+            glm::make_mat4(projM),
+            glm::dvec4(viewport[0], viewport[1], viewport[2], viewport[3])
+        );
+
+        winx = win.x;
+        winy = win.y;
+        winz = win.z;
     }
     omap[omap_count].ID=ID;
     omap[omap_count].type=type;
@@ -1197,19 +1211,6 @@ int find_selected_object(int x,int y,GLfloat *wx,GLfloat *wy,GLfloat *wz, int *i
     return 0;
 }
 
-/**
- * Enables to print string as 2D bitmaps in OpenGL 
- * @author: SD
- * @date: 02.09.09
- * */
-static void renderBitmapString( float x, float y, void *font, char* string) { 
-    char *c;
-    glRasterPos2f(x,y);
-    for (c=string; *c != '\0'; c++) {
-        glutBitmapCharacter(font, *c);
-    }
-}
-
 
 /*************************************************************** 
 * hauke hoelbe 08.02.2010                                      *
@@ -1293,7 +1294,7 @@ static void ced_draw_hit(CED_Hit *h){
 
     // time is passed to the hit data and is expected to be animated
     bool to_animate = h->time > 0.f;
-    if ( to_animate && animate_layer == -1 ) animation_start_time = glutGet(GLUT_ELAPSED_TIME);
+    if ( to_animate && animate_layer == -1 ) animation_start_time = (int)SDL_GetTicks();
 
     if(!IS_VISIBLE(h->layer)){
         if (to_animate && animate_layer == int(h->layer) ) animate_layer = -1;
@@ -1306,9 +1307,9 @@ static void ced_draw_hit(CED_Hit *h){
         else if ( animate_layer != int(h->layer) ){
             setting.layer[animate_layer] = false;
             animate_layer = h->layer;
-            animation_start_time = glutGet(GLUT_ELAPSED_TIME);
+            animation_start_time = (int)SDL_GetTicks();
         }
-        float elapsed_time = 0.001*( glutGet(GLUT_ELAPSED_TIME) - animation_start_time); // in seconds
+        float elapsed_time = 0.001*( (int)SDL_GetTicks() - animation_start_time); // in seconds
         if ( elapsed_time < h->time ) return ;
     }
 
@@ -1595,7 +1596,7 @@ static void ced_write_picking_text(CED_PICKING_TEXT *){
     glVertex3d(0,0,0);
     glVertex3d(10000,10000,10000);
     glEnd();
-    glutPostRedisplay();
+    ced_needs_redraw = true;
 
 
     std::cout << text->text << std::endl;
@@ -2016,7 +2017,6 @@ static void ced_draw_geotube(CED_GeoTube *c){
        glLineWidth(1.);
        //glLineWidth(detector_lines_wide);
 
-       GLUquadricObj *q1 = gluNewQuadric();
        ced_color(c->color);
        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);    
      
@@ -2024,22 +2024,13 @@ static void ced_draw_geotube(CED_GeoTube *c){
 
        if(c->rotate_o > 0.01 ) glRotatef(c->rotate_o, 0, 0, 1);
 
-       gluQuadricNormals(q1, GL_SMOOTH);
-       gluQuadricTexture(q1, GL_TRUE);
-       
         if(c->classic_outer){
-            //gluCylinder(q1, d_o, d_o, z*2, c->edges_o > maxEdges?maxEdges:c->edges_o, 1);
-
-            gluCylinder(q1, d_o, d_o, z*2, c->edges_o, 1);
+            geoSolidCylinder(d_o, z*2, c->edges_o, 1); // @refactored: replace gluCylinder
         }
         if(d_i > 0 && c->classic_inner){
             if(c->rotate_o > 0.01 ) glRotatef(c->rotate_i, 0, 0, 1);
-            //gluCylinder(q1, d_i, d_i, z*2, c->edges_i>maxEdges?maxEdges:c->edges_i, 1); 
-            gluCylinder(q1, d_i, d_i, z*2, c->edges_i, 1); 
+            geoSolidCylinder(d_i, z*2, c->edges_i, 1); // @refactored: replace gluCylinder
         }
-
-        gluDeleteQuadric(q1);
-
     }
     glPopMatrix();
 }
@@ -2052,8 +2043,6 @@ static unsigned GEOC_ID=0;
 
 static void ced_draw_geocylinder(CED_GeoCylinder *c){
   
-    GLUquadricObj *q1 = gluNewQuadric();
-  
     glPushMatrix();
     glLineWidth(1.);
     ced_color(c->color);
@@ -2062,10 +2051,6 @@ static void ced_draw_geocylinder(CED_GeoCylinder *c){
   
     double transformed_shift = single_fisheye_transform(c->shift, fisheye_alpha);
     glTranslatef(0.0, 0.0, transformed_shift);
-    //if(c->rotate > 0.01 )
-    //glRotatef(c->rotate, 0, 0, 1);
-    gluQuadricNormals(q1, GL_SMOOTH);
-    gluQuadricTexture(q1, GL_TRUE);
     //SM-H: Fisheye code
     double d = single_fisheye_transform(c->d, fisheye_alpha);
   
@@ -2076,9 +2061,7 @@ static void ced_draw_geocylinder(CED_GeoCylinder *c){
     if(c->rotate > 0.01 ){
         glRotatef(c->rotate, 0, 0, 1);
     }
-    gluCylinder(q1, d, d, z*2, c->sides, 1);
-
-    gluDeleteQuadric(q1);
+    geoSolidCylinder(d, z*2, c->sides, 1);
 
     glPopMatrix();
 }
@@ -2090,8 +2073,6 @@ static unsigned GEOCR_ID=0;
 static void ced_draw_geocylinder_r(CED_GeoCylinderR *c){
     //FIXME: implement fisheye here as well
     //Non trivial due to possible rotations...
-    GLUquadricObj *q1 = gluNewQuadric();
-
     if(!IS_VISIBLE(c->layer)){
         return;
     }
@@ -2109,17 +2090,13 @@ static void ced_draw_geocylinder_r(CED_GeoCylinderR *c){
     
     // center!
     glTranslated(0.0,0.0,-(c->z)/2);
-  
-  	glEnable(GL_BLEND);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);  
-        
-    gluQuadricNormals(q1, GL_SMOOTH);
-    gluQuadricTexture(q1, GL_TRUE);
-    gluCylinder(q1, c->d, c->d, c->z, c->sides, 1);
-    //gluCylinder(q1, c->d, c->d, c->z, 1000, 1000);
-  
+
+    glEnable(GL_BLEND);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    geoSolidCylinder(c->d, c->z, c->sides, 1);
+
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    gluDeleteQuadric(q1);
   
   	//glDisable(GL_BLEND);
     glEnd();
@@ -2153,13 +2130,6 @@ static void ced_draw_ellipsoid_r(CED_EllipsoidR * eli )  {
     /** Quadric object */
    	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  	GLUquadricObj *Sphere;
-  	
-  	/** Obtain a new quadric */
-	Sphere = gluNewQuadric();
-  	gluQuadricNormals(Sphere, GLU_SMOOTH);
-  	gluQuadricTexture(Sphere, GL_TRUE);
-
     /** Set polygon's filling */
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -2169,14 +2139,10 @@ static void ced_draw_ellipsoid_r(CED_EllipsoidR * eli )  {
 	/** Draw the cone */
 	glEnable(GL_BLEND);
 
-	 /** Alter scale factors so as to obtain an ellipsoid from a sphere */
+	/** Alter scale factors so as to obtain an ellipsoid from a sphere */
 	glScaled(eli->size[0]/2, eli->size[1]/2, eli->size[2]/2);
 
-  	/**Draw the sphere */
-	gluSphere(Sphere, 1.0, slices, stacks);
-
-    //glDisable(GL_BLEND); //hauke test
-    gluDeleteQuadric(Sphere);
+	geoSolidSphere(1.0, slices, stacks);
     glPopMatrix();
   	glEndList();	
 }
@@ -2373,8 +2339,10 @@ static void ced_draw_legend(CED_Legend *legend){
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
-    GLfloat w=glutGet(GLUT_SCREEN_WIDTH); 
-    GLfloat h=glutGet(GLUT_SCREEN_HEIGHT); ;
+    SDL_Rect display_bounds;
+    SDL_GetDisplayBounds(SDL_GetPrimaryDisplay(), &display_bounds);
+    GLfloat w = (GLfloat)display_bounds.w;
+    GLfloat h = (GLfloat)display_bounds.h;
 
     int  WORLD_SIZE=1000; //static worldsize maybe will get problems in the future...
     glOrtho(-WORLD_SIZE*w/h,WORLD_SIZE*w/h,-WORLD_SIZE,WORLD_SIZE, -15*WORLD_SIZE,15*WORLD_SIZE);
@@ -2415,7 +2383,7 @@ static void ced_draw_legend(CED_Legend *legend){
 	int x_offset_legend = 60;
 	int y_offset_legend = 20;
 	
-	void* font=GLUT_BITMAP_TIMES_ROMAN_10; //default font                           //draw into back right buffer
+	int font = setting.font;
   	int tick_size = 10;
 	
 	/**
@@ -2424,7 +2392,7 @@ static void ced_draw_legend(CED_Legend *legend){
     double dark=1.0-(setting.bgcolor[0]+setting.bgcolor[1]+setting.bgcolor[2])/3.0; //ever readable color
     glColor3f(dark,dark,dark);
 
-	renderBitmapString(x_min-x_offset_legend,y_min+stripeThickness*color_steps-y_offset_legend, font, header);
+	font_render(font, x_min-x_offset_legend, y_min+stripeThickness*color_steps-y_offset_legend, header);
 	glEnd();
 	//glPopMatrix();
 	
@@ -2432,13 +2400,13 @@ static void ced_draw_legend(CED_Legend *legend){
 	 *  Legend footer: LOG or LIN */
 	switch(scale){
 		case 'a': default:
-			renderBitmapString(x_min-x_offset_legend,y_min-y_offset_legend, font, footer);
+			font_render(font, x_min-x_offset_legend, y_min-y_offset_legend, footer);
 			glEnd();
 		break;
 		/** LIN */
 		case 'b':
 			strncpy( footer, "LIN", 4 );
-			renderBitmapString(x_min-x_offset_legend,y_min-y_offset_legend, font, footer);
+			font_render(font, x_min-x_offset_legend, y_min-y_offset_legend, footer);
 			glEnd();
 		break;
 	}
@@ -2477,13 +2445,13 @@ static void ced_draw_legend(CED_Legend *legend){
 			
 			if (i==0){
 				snprintf(string, 6,  "%.1f", ene_min);
-				renderBitmapString(x_min+x_offset,y_min+y_offset, font, string);
+				font_render(font, x_min+x_offset, y_min+y_offset, string);
 			}
 			else if (i==(color_steps-1)){
 				//printf("top\n");
 				snprintf(string, 6, "%.1f", ene_max);
-				renderBitmapString(x_min+x_offset,y_min+stripeThickness*i+y_offset, font, string);
-			}
+				font_render(font, x_min+x_offset, y_min+stripeThickness*i+y_offset, string);
+            }
 		}
 		
 		/**
@@ -2519,7 +2487,7 @@ static void ced_draw_legend(CED_Legend *legend){
 
     
             glColor3f(dark,dark,dark);
-			renderBitmapString(x_min+x_offset,y_min+stripeThickness*pos+y_offset, font, string);
+			font_render(font, x_min+x_offset, y_min+stripeThickness*pos+y_offset, string);
 
 			++tickNumber;
 		}
@@ -2770,7 +2738,7 @@ static void ced_draw_cone_r(CED_ConeR * cone )  {
 
   	glRotated(180, 1.0, 0.0, 0.0);
   	glTranslated(0.0, 0.0, -(cone->height));
-	glutSolidCone(base, height, slices, stacks);
+	geoSolidCone(base, height, slices, stacks);
 
     
 

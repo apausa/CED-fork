@@ -9,9 +9,9 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.20 FATAL_ERROR)
 PROJECT( CED )
 
 # project version
-SET( ${PROJECT_NAME}_VERSION_MAJOR 1 )
-SET( ${PROJECT_NAME}_VERSION_MINOR 10 )
-SET( ${PROJECT_NAME}_VERSION_PATCH 1 )
+SET( ${PROJECT_NAME}_VERSION_MAJOR 2 )
+SET( ${PROJECT_NAME}_VERSION_MINOR 0 )
+SET( ${PROJECT_NAME}_VERSION_PATCH 0 )
 
 
 
@@ -19,14 +19,14 @@ SET( ${PROJECT_NAME}_VERSION_PATCH 1 )
 
 FIND_PACKAGE( ILCUTIL COMPONENTS ILCSOFT_CMAKE_MODULES REQUIRED )
 
-# GLUT and OpenGL are required by glced
-FIND_PACKAGE( GLUT REQUIRED )
-FIND_PACKAGE( OpenGL QUIET )
+FIND_PACKAGE( SDL3 REQUIRED CONFIG )
+FIND_PACKAGE( SDL3_ttf REQUIRED )
+FIND_PACKAGE( OpenGL REQUIRED )
+FIND_PACKAGE( glm REQUIRED )
+FIND_PACKAGE( Fontconfig REQUIRED )
 
 # load default settings from ILCSOFT_CMAKE_MODULES
 INCLUDE( ilcsoft_default_settings )
-
-
 
 ### DOCUMENTATION ###########################################################
 
@@ -62,7 +62,7 @@ INSTALL_SHARED_LIBRARY( CED DESTINATION lib )
 
 # link CED client library to the math library
 FIND_LIBRARY( c_math_lib NAMES m )
-TARGET_LINK_LIBRARIES( CED ${GLUT_LIBRARIES} ${c_math_lib} )
+TARGET_LINK_LIBRARIES( CED ${c_math_lib} )
 MARK_AS_ADVANCED( c_math_lib )
 
 
@@ -73,14 +73,12 @@ MESSAGE( STATUS "CED_SERVER = ${CED_SERVER}" )
 
 IF( CED_SERVER )
 
-    IF( NOT GLUT_FOUND OR NOT OPENGL_FOUND )
-        MESSAGE( FATAL_ERROR "could not find packages glut + opengl required to build glced" )
+    IF( NOT OPENGL_FOUND )
+        MESSAGE( FATAL_ERROR "could not find package opengl required to build glced" )
     ENDIF()
 
-    INCLUDE_DIRECTORIES( ${GLUT_INCLUDE_DIR} )
-
     # copy paths from OPENGL_LIBRARIES to rpath list of glced to avoid system
-    # opengl libraries used in the linking process of glced to be overwriten
+    # opengl libraries used in the linking process of glced to be overwritten
     # by LD_LIBRARY_PATH, e.g.: LD_LIBRARY_PATH set by geant4 env_init_script
     # points to old mesa libraries in afs
     IF( NOT CED_NOT_INCLUDE_OPENGL_LINKER_PATH ) 
@@ -91,10 +89,10 @@ IF( CED_SERVER )
         #MESSAGE( "isSystemDir: ${isSystemDir}" )
         IF("${isSystemDir}" STREQUAL "-1")
           LIST( APPEND _opengl_linker_paths ${_opengl_lib_path} )
-        ENDIF("${isSystemDir}" STREQUAL "-1")
+        ENDIF()
       ENDFOREACH()
 
-    # remove duplicate paths
+      # remove duplicate paths
       IF( _opengl_linker_paths )
         LIST( REMOVE_DUPLICATES _opengl_linker_paths )
       ENDIF()
@@ -108,17 +106,21 @@ IF( CED_SERVER )
     #    LIST( APPEND CMAKE_INSTALL_NAME_DIR "${_opengl_linker_paths}" )
     #ENDIF()
 
-    AUX_SOURCE_DIRECTORY( ./src/server server_sources )
-    ADD_EXECUTABLE( glced ${server_sources} )
+    ADD_EXECUTABLE(glced ./src/server/glced.cc ./src/server/ced_srv.cc ./src/server/gl_font.cc ./src/server/fg_geometry.cc )
 
     SET_TARGET_PROPERTIES( glced PROPERTIES
         INSTALL_RPATH "${CMAKE_INSTALL_RPATH};${_opengl_linker_paths}"
         INSTALL_NAME_DIR "${CMAKE_INSTALL_NAME_DIR};${_opengl_linker_paths}"
     )
 
-    TARGET_LINK_LIBRARIES( glced CED 
-        ${GLUT_glut_LIBRARY}
-        ${OPENGL_LIBRARIES}
+    TARGET_LINK_LIBRARIES(
+      glced
+      CED
+      SDL3::SDL3
+      OpenGL::GL
+      SDL3_ttf::SDL3_ttf
+      glm::glm
+      Fontconfig::Fontconfig
     )
 
     INSTALL( TARGETS glced DESTINATION bin )

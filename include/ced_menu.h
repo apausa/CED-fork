@@ -10,77 +10,27 @@ USED BY:
 DESCRIPTION:
     provides definitions and classes for the CED main and popup menu.
 ****************************************************************/
+
+ /* Version 2 refactor changes:
+  * - ced_needs_redraw replaces glutPostRedisplay
+  * - font_get_width() and font_get_height() replace getFontDimensions()
+  * - font_render() replaces drawHelpString() function
+  * - Bring down menu to account for title bar
+  */
+
 #ifndef __CED_MENU
 #define __CED_MENU
 
-#include <FontSettings.h>
+#include <gl_font.h>
 
 using namespace std;
+
 extern CEDsettings setting;
 extern GLfloat window_width;
+extern GLfloat window_height;
+extern bool ced_needs_redraw;
 
-void drawHelpString (const string & str, float x,float y){ //format help strings strings: "[<key>] <description>"
-    unsigned int i;
-//    float x1=x;
-//    float y1=y;
-//    if( x1 < 0.0){
-//        x1=0.;
-//    }
-//    if( y1 < 0.0){
-//        y1=0.;
-//    }
-//
-//    glRasterPos2f(x1,y1);
-
-    glRasterPos2f(x,y);
-
-    int monospace = 0;
-    for (i = 0; str[i]; i++){
-        if(str[i] == '['){
-            monospace = 1;
-            if(setting.font == 0){
-                glutBitmapCharacter (GLUT_BITMAP_HELVETICA_10, '[');
-            }else if(setting.font == 1){
-                glutBitmapCharacter (GLUT_BITMAP_HELVETICA_12, '[');
-            }else if(setting.font == 2){
-                glutBitmapCharacter (GLUT_BITMAP_HELVETICA_18, '[');
-            }
-            i++;
-        }
-        else if(str[i] == ']'){
-             monospace = 0;
-        }
-        if(monospace){
-            if(setting.font == 0){
-                glutBitmapCharacter(GLUT_BITMAP_8_BY_13, str[i]);
-            }else if(setting.font == 1){
-                glutBitmapCharacter(GLUT_BITMAP_8_BY_13, str[i]);
-            }else if(setting.font == 2){
-                glutBitmapCharacter(GLUT_BITMAP_9_BY_15, str[i]);
-            }
-        }else{
-            //glutBitmapCharacter (GLUT_BITMAP_HELVETICA_10, str[i]);
-            //glutBitmapCharacter ( GLUT_BITMAP_HELVETICA_12 , str[i]);
-            //glutBitmapCharacter ( GLUT_BITMAP_HELVETICA_18 , str[i]);
-            if(setting.font == 0){
-                glutBitmapCharacter (GLUT_BITMAP_HELVETICA_10, str[i]);
-            }else if(setting.font == 1){
-                glutBitmapCharacter (GLUT_BITMAP_HELVETICA_12, str[i]);
-            }else if(setting.font == 2){
-                glutBitmapCharacter (GLUT_BITMAP_HELVETICA_18, str[i]);
-            }
-        }
-    }
-}
-
-void drawStringBig (char *s){
-    unsigned int i;
-    for (i = 0; i[s]; i++){
-        glutBitmapCharacter (GLUT_BITMAP_HELVETICA_18, s[i]);
-    }
-}
-
-
+static constexpr int CED_TITLE_BAR_HEIGHT = 24;
 
 class CED_SubSubMenu{
     public:
@@ -89,9 +39,8 @@ class CED_SubSubMenu{
         }
         void draw(){
 
-                FontDimensions dim = getFontDimensions(setting.font);
-                int height = dim.height;
-                int width = dim.width;
+                int height = font_get_height(setting.font);
+                int width  = font_get_width(setting.font, "A");
 
                 if(isExtend || isMouseOver){
                     isAktive=true;
@@ -205,7 +154,12 @@ class CED_SubSubMenu{
                     glEnd();
                     glColor3f(0,0,0);
                 }else{
-                    drawHelpString(title.substr(0,int(fabs((x_end-x_start)/width))), x_start+3, y_start+height-height/5);
+                    font_render(
+                        setting.font,
+                        x_start+3,
+                        y_start,
+                        title.substr(0,int(fabs((x_end-x_start)/width))).c_str()
+                    );
                 }
         }
 
@@ -246,10 +200,10 @@ class CED_SubSubMenu{
         int mouseMove(int x,int y){
             if(x_start < x && x_end > x && y_start < y && y_end > y){
                 isMouseOver=true;
-                glutPostRedisplay();
+                ced_needs_redraw = true;
             } else if(isMouseOver==true){
                 isMouseOver=false;
-                glutPostRedisplay();
+                ced_needs_redraw = true;
             }
             unsigned i;
             for(i=0;(unsigned) i<subsubMenus.size();i++){
@@ -266,8 +220,7 @@ class CED_SubSubMenu{
 
 
         void addItem(CED_SubSubMenu *subsub){
-            FontDimensions dim = getFontDimensions(setting.font);
-            int height = dim.height;
+            int height = font_get_height(setting.font);
 
             subsub->x_start=x_start;
             subsub->x_end  =x_start+50; //TODO
@@ -287,7 +240,7 @@ class CED_SubSubMenu{
                 return;
             }
             cout << "       delete subsubmenus (" << subsubMenus.size() << " submenus)" <<  endl;
-            for(unsigned i=1;i<subsubMenus.size();i++){
+            for(unsigned i=0;i<subsubMenus.size();i++){
                 cout << "           delete: " << subsubMenus.at(i)->title <<   endl;
                 delete subsubMenus.at(i);
                 subsubMenus.at(i)=NULL;
@@ -321,9 +274,8 @@ class CED_SubMenu{
         }
         void draw(){
 
-                FontDimensions dim = getFontDimensions(setting.font);
-                int height = dim.height;
-                int width = dim.width;
+                int height = font_get_height(setting.font);
+                int width = font_get_width(setting.font, "A");
 
                 if(isExtend || isMouseOver){
                     glColor4f(0.662745,0.662745,0.662745,1);
@@ -349,7 +301,12 @@ class CED_SubMenu{
                     glEnd();
                     glColor3f(0,0,0);
                 }else{
-                    drawHelpString(title, x_start+3, y_start+height-height/5);
+                    font_render(
+                        setting.font,
+                        x_start+3,
+                        y_start,
+                        title.c_str()
+                    );
                 }
 
                 //drawHelpString(title, x_start+3, y_start+height-height/5);
@@ -425,10 +382,10 @@ class CED_SubMenu{
             }
             if(x_start < x && x_end > x && y_start < y && y_end > y){
                 isMouseOver=true;
-                glutPostRedisplay();
+                ced_needs_redraw = true;
             }else if(isMouseOver==true){
                 isMouseOver=false;
-                glutPostRedisplay();
+                ced_needs_redraw = true;
             }
 
         }
@@ -492,8 +449,8 @@ class CED_Menu{
 
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-            GLfloat w=glutGet(GLUT_WINDOW_WIDTH);
-            GLfloat h=glutGet(GLUT_WINDOW_HEIGHT); ;
+            GLfloat w=window_width;
+            GLfloat h=window_height;
 
             int  WORLD_SIZE=1000; //static worldsize maybe will get problems in the future...
 
@@ -506,15 +463,14 @@ class CED_Menu{
 
             glColor4f(0.827451,0.827451,0.827451,1);
 
-            FontDimensions dim = getFontDimensions(setting.font);
-            int height = dim.height;
+            int height = font_get_height(setting.font);
 
 
             glBegin(GL_QUADS);
-            glVertex3f(0, 0,0);
-            glVertex3f(0,height,0);
-            glVertex3f(w,height,0);
-            glVertex3f(w,0,0);
+            glVertex3f(0, CED_TITLE_BAR_HEIGHT,0);
+            glVertex3f(0,CED_TITLE_BAR_HEIGHT+height,0);
+            glVertex3f(w,CED_TITLE_BAR_HEIGHT+height,0);
+            glVertex3f(w,CED_TITLE_BAR_HEIGHT,0);
             glEnd();
 
 
@@ -525,8 +481,8 @@ class CED_Menu{
             //glVertex3f(1,1,0);
             //glVertex3f(1,10,0);
 
-            glVertex3f(1,height+1,0);
-            glVertex3f(w-1,height+1,0);
+            glVertex3f(1,CED_TITLE_BAR_HEIGHT+height+1,0);
+            glVertex3f(w-1,CED_TITLE_BAR_HEIGHT+height+1,0);
 
             //glVertex3f(w-1,8,0);
             //glVertex3f(w-1,1,0);
@@ -573,24 +529,13 @@ class CED_Menu{
         }
 
         void addSubMenu(CED_SubMenu *sub){
-            FontDimensions dim = getFontDimensions(setting.font);
-            int height = dim.height;
-
-            double length=10;
-            if(setting.font==0){
-                length=4.8;
-            }
-            if(setting.font==1){
-                length=5.2;
-            }
-            if(setting.font==2){
-                length=10.0;
-            }
+            int height = font_get_height(setting.font);
+            int width  = font_get_width(setting.font, "A");
 
             sub->x_start=x_offset;
-            sub->y_start=1;
-            sub->y_end=height+1;
-            x_offset+=(unsigned)(sub->title.length()*length+3*length);
+            sub->y_start=CED_TITLE_BAR_HEIGHT+1;
+            sub->y_end=CED_TITLE_BAR_HEIGHT+height+1;
+            x_offset += sub->title.length() * width + 3 * width;
             sub->x_end=x_offset;
             subMenus.push_back(sub);
             x_offset+=5;
@@ -598,9 +543,12 @@ class CED_Menu{
         CED_Menu(){
             x_offset=1;
         }
+
+        unsigned totalWidth() const { return x_offset; } // expose the menu width so glced.cc can exclude it from the window drag region
+        
         ~CED_Menu(){
             cout << "delete ced menu" <<  endl;
-            for(int i=0;(unsigned) i<subMenus.size();){
+            for(int i=0;(unsigned) i<subMenus.size();i++){
                 delete subMenus.at(i);
             }
         }
@@ -616,9 +564,8 @@ class CED_PopUpMenu{
             title=new_title;
         }
         void draw(){
-            FontDimensions dim = getFontDimensions(setting.font);
-            int height = dim.height;
-            int width = dim.width;
+            int height = font_get_height(setting.font);
+            int width = font_get_width(setting.font, "A");
 
             unsigned  maxlength=title.length();
             for(unsigned i=0u; i<subsubMenus.size();i++){
@@ -644,8 +591,8 @@ class CED_PopUpMenu{
 
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-            GLfloat w=glutGet(GLUT_WINDOW_WIDTH);
-            GLfloat h=glutGet(GLUT_WINDOW_HEIGHT); ;
+            GLfloat w=window_width;
+            GLfloat h=window_height;
 
             int  WORLD_SIZE=1000; //static worldsize maybe will get problems in the future...
 
@@ -740,10 +687,10 @@ class CED_PopUpMenu{
                 }
                 if(x_start < x && x_end > x && y_start < y && y_end > y){
                     isMouseOver=true;
-                    glutPostRedisplay();
+                    ced_needs_redraw = true;
                 }else if(isMouseOver==true){
                     isMouseOver=false;
-                    glutPostRedisplay();
+                    ced_needs_redraw = true;
                 }
             }
 
