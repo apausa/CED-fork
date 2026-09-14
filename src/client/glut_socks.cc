@@ -1,17 +1,3 @@
-/* TCP/IP communication for GLUT based programs
- * Server (GLUT) side. 
- *
- * Alexey Zhelezov, DESY/ITEP, 2005 
- * July 2005, Jörgen Samson: small fix to keep
- *            TCP/IP connection alive if data
- *            is temporary not available
- */
-
- /* Version 2 refactor changes:
-  * - Replaced __glutSockets linked list with a single connection
-  * - Thus, removed add_socket() and delete_socket() functions
- */ 
-
 char trusted_hosts[50]; 
 
 #include "ced.h"

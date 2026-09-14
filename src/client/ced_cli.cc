@@ -1,7 +1,3 @@
-/* "C" event display.
- * Client side elements definitions.
- *
- * Alexey Zhelezov, DESY/ITEP, 2005 */
 #include <string.h>
 
 #include <ced_cli.h>

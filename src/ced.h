@@ -1,8 +1,3 @@
-/* "C" event display.
- * Main part. 
- *
- * Alexey Zhelezov, DESY/ITEP, 2005 */
-
 /*
  * This file is internal. It must not be
  * included into enduser application.
