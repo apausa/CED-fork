@@ -106,7 +106,14 @@ IF( CED_SERVER )
     #    LIST( APPEND CMAKE_INSTALL_NAME_DIR "${_opengl_linker_paths}" )
     #ENDIF()
 
-    ADD_EXECUTABLE(glced ./src/server/glced.cc ./src/server/ced_srv.cc ./src/server/gl_font.cc ./src/server/fg_geometry.cc )
+    ADD_EXECUTABLE(
+      glced
+      ./src/server/glced.cc
+      ./src/server/ced_srv.cc
+      ./src/server/gl_font.cc
+      ./src/server/fg_geometry.cc
+      ./src/server/cylinder_geometry.cc
+    )
 
     SET_TARGET_PROPERTIES( glced PROPERTIES
         INSTALL_RPATH "${CMAKE_INSTALL_RPATH};${_opengl_linker_paths}"
