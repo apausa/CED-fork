@@ -113,6 +113,7 @@ IF( CED_SERVER )
       ./src/server/gl_font.cc
       ./src/server/fg_geometry.cc
       ./src/server/cylinder_geometry.cc
+      ./src/server/fisheye.cc
     )
 
     SET_TARGET_PROPERTIES( glced PROPERTIES

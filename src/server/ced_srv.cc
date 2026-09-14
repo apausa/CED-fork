@@ -22,6 +22,7 @@
 #include <gl_font.h>
 #include <fg_geometry.h>
 #include "cylinder_geometry.h"
+#include "fisheye.h"
 
 #define PORT  0x1234
 
@@ -84,42 +85,6 @@ static unsigned omap_alloced=0;
 static void ced_draw_geobox(CED_GeoBox * box );
 static void ced_draw_geobox_r_solid(CED_GeoBoxR * box );
 
-//SM-H: Takes a given point, and returns the fisheye transformed version. Based on transform given in
-//'Event display: Can We See What We Want to See', 
-//H. Drevermann, D. Kuhn, B.S. Nilsson, 1995
-//TODO: More elegant (and eficient) implementation possible. 
-//See http://www.opengl.org/discussion_boards/ubbthreads.php?ubb=showflat&Number=262910
-CED_Point fisheye_transform(const float x, const float y, const float z, const double scale_factor) {
-    CED_Point p_final;
-    if(scale_factor < 1e-10) {
-        //If fisheye_alpha < observable value, do nothing
-        p_final.x = x;
-        p_final.y = y;
-        p_final.z = z;
-    }
-    else {
-        float rho = sqrt(x*x + y*y);
-        rho = rho/(1.0+scale_factor*rho);
-        float r = sqrt(rho*rho+z*z);
-        if(r==0){r=0.0000000000001; } //hauke: in some cases r = 0, not good for next line (z/r)
-        float cos_theta = z/r;
-        float theta = acos(cos_theta);
-        float phi = atan2(y,x); 
-        p_final.x = r*cos(phi)*sin(theta);
-        p_final.y = r*sin(phi)*sin(theta);
-        //p_final.z = z/(1.0 + fisheye_alpha*abs(z)); //hauke: missing 'f' in abs???
-        p_final.z = z/(1.0 + fisheye_alpha*fabs(z));
-
-    }
-
-    return p_final;
-}
-
-//SM-H: The same as above, but just applied to r or z rather than a whole cartesian co-ordinate system
-//CED co-ordinates only defined up to float precision
-inline float single_fisheye_transform(float c, const double scale_factor) {
-    return c/(1.0+scale_factor*fabs(c));
-}
 
 /*
  * To be called from drawing functions
