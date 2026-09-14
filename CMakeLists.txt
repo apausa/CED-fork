@@ -114,6 +114,7 @@ IF( CED_SERVER )
       ./src/server/fg_geometry.cc
       ./src/server/cylinder_geometry.cc
       ./src/server/fisheye.cc
+      ./src/server/selection.cc
     )
 
     SET_TARGET_PROPERTIES( glced PROPERTIES

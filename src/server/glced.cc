@@ -23,6 +23,7 @@
 #include <fg_geometry.h>
 #include <SDL3/SDL.h>
 #include <gl_font.h>
+#include "selection.h"
 
 #include <sys/select.h>
 
@@ -45,9 +46,6 @@
 using namespace std;
 
 static int numpict=0;
-
-int ced_picking(int x,int y,GLfloat *wx,GLfloat *wy,GLfloat *wz); //from ced_srv.c, need header files!
-
 
 //*************** global variables ***************************************//
 int animation_start_time = 0;
@@ -191,9 +189,6 @@ void screenshot(const char *name, int times);
 void buildLayerMenus(void);
 void buildMainMenu(void);
 void buildPopUpMenu(int x, int y);
-void ced_prepare_objmap(void);
-int ced_get_selected(int x,int y,GLfloat *wx,GLfloat *wy,GLfloat *wz);
-int find_selected_object(int x,int y,GLfloat *wx,GLfloat *wy,GLfloat *wz, int *id, int *layer, int *type);
 
 
 // ********** function definitions  (rest of file) ************************** //
