@@ -36,6 +36,14 @@ int find_selected_object(int x,int y,GLfloat *wx,GLfloat *wy,GLfloat *wz, int *i
 ***************************************************************/
 int ced_picking(int x,int y,GLfloat *wx,GLfloat *wy,GLfloat *wz);
 
+// Debug aid for the picking system: meant to unproject the screen point of
+// the last click back into world coordinates, log it alongside the received
+// text, and draw a marker line to where it landed. Disabled — written against
+// GLU's gluUnProject, which this project retired everywhere else in favor of
+// glm (see ced_add_objmap's glm::project for the forward equivalent); never
+// ported, so it stays commented out.
+void ced_write_picking_text(CED_PICKING_TEXT *);
+
 extern int SELECTED_ID;
 
 inline int ced_selected() {
