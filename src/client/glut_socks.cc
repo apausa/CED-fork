@@ -1,3 +1,12 @@
+/* TCP/IP communication for GLUT based programs
+ * Server (GLUT) side. 
+ *
+ * Alexey Zhelezov, DESY/ITEP, 2005 
+ * July 2005, Jörgen Samson: small fix to keep
+ *            TCP/IP connection alive if data
+ *            is temporary not available
+ */
+
 char trusted_hosts[50]; 
 
 #include "ced.h"

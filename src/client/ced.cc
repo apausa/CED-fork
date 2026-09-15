@@ -1,3 +1,8 @@
+/* "C" event display.
+ * Communications related part. 
+ *
+*ik
+ * Alexey Zhelezov, DESY/ITEP, 2005 */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
