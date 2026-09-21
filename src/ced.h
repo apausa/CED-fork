@@ -1,8 +1,3 @@
-/* "C" event display.
- * Main part. 
- *
- * Alexey Zhelezov, DESY/ITEP, 2005 */
-
 /*
  * This file is internal. It must not be
  * included into enduser application.
@@ -79,6 +74,8 @@ int ced_process_input(void *data);
 
 //------------
 void addLayerDescriptionToMenu(int,char *);//glced.c
+void print_layer_text(CED_TEXT *obj);//glced.c
+void ced_draw_legend(CED_Legend *legend);//glced.c
 void selectFromMenu(int id);//glced.c
 void toggleHelpWindow(void);//glced.c
 void updateLayerEntryInPopupMenu(int); //glced.c
