@@ -163,8 +163,6 @@ const char detec_layer_keys[] = {
     DETECTORLAYER_SHORTKEY_38, DETECTORLAYER_SHORTKEY_39,
 };
 
-static int subSave;
-static int subLoad;
 static int showHelp=0;
 static float WORLD_SIZE;
 static float FISHEYE_WORLD_SIZE;
