@@ -19,24 +19,6 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
-/*  Version 2 refactor changes:
- *
- * 1 These functions were kept after adapting them to SDL3
- * - _SDL_GL_Enter2DMode
- * - _SDL_GL_Leave2DMode
- * - _power_of_two 
- * - _SDL_GL_LoadTexture
- * 
- * 2 These functions were added
- * - _font_resolve 
- * - _font_get
- * - font_init
- * - font_render
- * - font_get_width
- * - font_get_height
- * - flont_clean
-*/
-
 #include <stdio.h>
 
 #ifdef __APPLE__

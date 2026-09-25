@@ -11,13 +11,6 @@ DESCRIPTION:
     provides definitions and classes for the CED main and popup menu.
 ****************************************************************/
 
- /* Version 2 refactor changes:
-  * - ced_needs_redraw replaces glutPostRedisplay
-  * - font_get_width() and font_get_height() replace getFontDimensions()
-  * - font_render() replaces drawHelpString() function
-  * - Bring down menu to account for title bar
-  */
-
 #ifndef __CED_MENU
 #define __CED_MENU
 

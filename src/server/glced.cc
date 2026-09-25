@@ -38,45 +38,6 @@
  *
  */
 
- /* Version 2 refactor changes:
-  * - geoSolidCylinder replaces glutSolidCilinder
-  * - geoSolidCone replaces glutSolidCone
-  * - SDL_Rect type handles screen width and height
-  * - font_render() replaces drawHelpString() function
-  * - SDL_GetTicks replaces GLUT elapsed time
-  * - SDL_GL_SwapWindow replaces glutSwapBuffers
-  * - glLoadMatrixf() funtion replaces gluPerspective()
-  * - glMultMatrixf() function replaces gluLookAt()
-  * - ced_needs_redraw replaces glutPostRedisplay
-  * - events MOUSE_DOWN, MOUSE_LEFT, MOUSE_RIGHT, MOUSE_MIDDLE replace GLUT_MOUSE_*
-  * - glutSetWindow function is no longer needed
-  * - events KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN replace GLUT_KEY_*
-  * - Removed phased out functions: timer, drawString, writeString, buildMenuPopup
-  * - glOrtho replaces gluOrtho2D
-  * - font_get_width() and font_get_height() replace getFontDimensions()
-  * - Removed GLUT native menu handle glutSetMenu
-  * - idle_func replaces glutIdleFunc
-  * - Event type SDL_EVENT_WINDOW_RESIZED and SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED replace glutReshapeFunc(reshape)
-  * - Event type SDL_EVENT_TEXT_INPUT replaces glutKeyboardFunc(keypressed)
-  * - Event type SDL_EVENT_KEY_DOWN replaces glutSpecialFunc(SpecialKey)
-  * - Event type SDL_EVENT_MOUSE_BUTTON_* replaces glutMouseFunc(mouse);
-  * - Event type SDL_EVENT_MOUSE_MOTION replaces glutMotionFunc(motion) and glutPassiveMotionFunc(mouse_passive)
-  * - Event type SDL_EVENT_MOUSE_WHEEL replaces glutMouseWheelFunc(mouseWheel)
-  * - Replace GLUT built-in socket monitoring with a single socket.
-  * - Force  to use the native Wayland backend 
-  * - SDL_Init replaces glutInit
-  * - SDL_GL_SetAttribute calls replace glutInitDisplayMode
-  * - Removed -geometry flag because SDL3 doesn't parse it natively like GLUT
-  * - Call SDL_GL_CreateContext as SDL3 separates it from window creation
-  * - Call SDL_GL_SetSwapInterval for vsync control
-  * - display() function replaces glutDisplayFunc(display)
-  *
-  * - GNOME's compositor doesn't draw title bars on Wayland
-  *   - So draw_ced_title_bar() creates a title bar
-  *   - And ced_window_hit_test() adds window dragging. And resizing functionality
-  *   - as window is now borderless for this change.
-  */
-
 #ifdef __APPLE__
 #  include <OpenGL/gl.h>
 #else
