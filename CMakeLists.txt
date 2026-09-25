@@ -73,8 +73,6 @@ MESSAGE( STATUS "CED_SERVER = ${CED_SERVER}" )
 
 IF( CED_SERVER )
 
-    IF( NOT OPENGL_FOUND )
-        MESSAGE( FATAL_ERROR "could not find package opengl required to build glced" )
     ENDIF()
 
     # copy paths from OPENGL_LIBRARIES to rpath list of glced to avoid system
